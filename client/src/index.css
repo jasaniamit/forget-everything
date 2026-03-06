@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+  :root {
+    /* Inspired by Replit_1768878013498.jpg: Clean white with soft blue accents */
+    --background: 0 0% 100%;
+    --foreground: 222 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 25% 10%;
+
+    --primary: 231 88% 73%; /* Soft blue/lavender #7B8FF7 approximation */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 231 88% 98%;
+    --secondary-foreground: 231 88% 25%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 231 88% 73%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 231 88% 73%;
+
+    --radius: 0.5rem;
+
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Inter', sans-serif;
+  }
+
+  .dark {
+    /* Dark mode kept for system preference users */
+    --background: 245 45% 4%;
+    --foreground: 0 0% 100%;
+    --primary: 245 85% 60%;
+    --accent: 190 90% 50%;
+  }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-tight;
+  }
+}
+
+/* Custom Utilities for smooth appearances */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-xl shadow-indigo-500/5;
+  }
+  
+  .premium-shadow {
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.04), 0 12px 36px -8px rgba(0, 0, 0, 0.08);
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500;
+  }
+}
+
+/* Premium Defaults */
+::selection {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

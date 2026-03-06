@@ -1,0 +1,179 @@
+You will upgrade the existing codebase into a high-end typographic font discovery platform with designer uploads. DO NOT delete current components. Extend the system with the following modules and architecture:
+
+====================================================
+1. FONT INGESTION BACKEND (SERVER SIDE)
+====================================================
+
+Create a new backend route: POST /api/fonts/upload
+Supports upload of .ttf, .otf, .woff, .woff2, .zip
+
+Pipeline:
+- save original file to /data/uploads
+- extract ZIP if exists
+- identify one or multiple font files
+- for each font file:
+    -> parse OpenType metadata (using fontkit + opentype.js)
+    -> compute metrics (x-height, cap-height, width, contrast, asc/desc, italic angle)
+    -> detect glyph features (double-vs-single story for 'a' & 'g', figures type, caps, small caps)
+    -> detect unicode coverage (Latin, Arabic, Devanagari, Japanese etc)
+    -> compute usage classification stubs (display, paragraph, UI, branding)
+- store result in DB via Drizzle ORM
+
+Store files locally in: /data/fonts/<family>/<style>/
+Store metadata in DB as JSONB
+
+====================================================
+2. FONT DATA SCHEMA (DATABASE)
+====================================================
+
+Add new tables:
+
+TABLE: font_families
+- id (uuid)
+- family_name (string)
+- designer_name (string nullable)
+- license (string)
+- donation_enabled (boolean default false)
+- donation_link (string nullable)
+- created_at
+
+TABLE: font_styles
+- id (uuid)
+- family_id (fk)
+- subfamily (Regular, Bold, etc)
+- weight_class (int)
+- width_class (int)
+- italic (boolean)
+- file_path (string)
+- preview_path (string nullable)
+- created_at
+
+TABLE: font_metrics
+- style_id (fk)
+- x_height_ratio (float)
+- cap_height_ratio (float)
+- width_ratio (float)
+- contrast_ratio (float)
+- asc_ratio (float)
+- desc_ratio (float)
+- italic_angle (float)
+
+TABLE: font_glyph_features
+- style_id (fk)
+- a_story (enum: 'single','double')
+- g_story (enum: 'single','double')
+- figures (enum: 'lining','oldstyle')
+- figure_width (enum: 'tabular','proportional')
+- caps_only (boolean)
+- small_caps (boolean)
+- variable_axes (jsonb)
+
+TABLE: font_classification
+- style_id (fk)
+- serif_type (enum: 'didone','transitional','oldstyle','slab','geometricSans','humanistSans','groteskSans','mono','script','blackletter','display','handwriting')
+- usage_tags (jsonb string array)
+- mood_tags (jsonb string array)
+
+====================================================
+3. SEARCH BACKEND
+====================================================
+
+Add route: GET /api/fonts/search with query parameters:
+
+Parameters:
+- q (search query)
+- weight[]
+- width[]
+- x_height[]
+- contrast[]
+- serif_type[]
+- usage_tags[]
+- mood_tags[]
+- license[]
+- supports_script[]
+- caps_only=true/false
+- variable=true/false
+
+Use Postgres JSONB filters for now.
+
+====================================================
+4. FRONTEND INTEGRATION
+====================================================
+
+Update client to connect filters to backend:
+
+- Filter UI must call /api/fonts/search
+- Show results dynamically
+- Update without full reload
+- Show “No matches” message
+
+Font detail page updates:
+- show metrics
+- show classification
+- show glyph properties
+- show license
+- show donation button (if enabled)
+- show download button
+
+Add Upload Form page:
+Fields:
+- font files upload
+- designer name (optional)
+- license select (Personal / OFL / GPL / Apache / Custom)
+- donation link (optional)
+- usage tags (checkbox multi)
+- mood tags (checkbox multi)
+
+====================================================
+5. LOCAL STORAGE ↔ FUTURE STORAGE ADAPTER
+====================================================
+
+Implement storage abstraction:
+
+storage/
+- index.js (select driver)
+- local.js (write to /data/fonts)
+- b2.js (stub for future)
+- r2.js (stub for future)
+
+Use STORAGE_DRIVER env var.
+
+====================================================
+6. FONT PREVIEW & SAMPLE RENDERING
+====================================================
+
+Generate sample previews on upload:
+- Alphabet string "Aa Bb Cc ..."
+- pangram: "The quick brown fox jumps over the lazy dog"
+- Numeric: "0123456789"
+- character map grid
+
+Store previews as PNG in style.preview_path
+
+====================================================
+7. SEO & SITEMAPS
+====================================================
+
+Add:
+- dynamic sitemap for families + styles
+- meta tags for OpenGraph + Twitter card
+- canonical URLs
+- optimized font preview og:image
+
+====================================================
+8. LICENSE & DOWNLOAD
+====================================================
+
+Download route:
+GET /api/fonts/:styleId/download
+
+Includes:
+- license.txt included inside ZIP
+- font file(s)
+- optional donation link in README.txt
+
+====================================================
+
+DO NOT REMOVE existing UI or components. ONLY EXTEND.
+
+====================================================

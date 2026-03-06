@@ -1,0 +1,106 @@
+========================
+1. FONT INGESTION SYSTEM
+========================
+Must support:
+- upload: .ttf, .otf, .woff, .woff2, .zip
+- bulk import from folders
+- bulk import from open licensed sources (Google Fonts, Font Library, GNU Freefont, SIL OFL)
+- auto-zip unpack for families
+
+When a font is ingested:
+- store font file(s)
+- extract metadata
+- generate preview images
+- generate variable text specimen
+- store into DB
+
+===============================
+2. FONT METADATA EXTRACTION
+===============================
+Must extract from font tables:
+- name
+- family
+- style
+- weight (usWeightClass or panose)
+- width (usWidthClass or panose)
+- italic (italicAngle)
+- x-height/cap-height ratio
+- contrast (panose.bContrast)
+- figure style (lining/oldstyle)
+- caps (all caps / normal)
+- story style (single-story vs double-story 'a' and 'g')
+- number of fonts in family
+- license info (OFL, GPL, CC0, Proprietary, Unknown)
+
+Libraries allowed:
+- Python: fonttools
+- Node: opentype.js or fontkit
+
+Metadata must output JSON.
+
+==============================
+3. PROPERTY NORMALIZATION
+==============================
+Normalize extracted values into filterable buckets:
+
+WEIGHT:
+- Thin
+- Extra Light
+- Light
+- Regular
+- Medium
+- Semibold
+- Bold
+- Black
+
+WIDTH:
+- Ultra Condensed
+- Condensed
+- Normal
+- Expanded
+- Ultra Expanded
+
+X-HEIGHT:
+- Low
+- Medium
+- High
+(based on x-height / cap-height ratio)
+
+CONTRAST:
+- Low
+- Medium
+- High
+
+ITALICS:
+- Yes / No
+
+CASE:
+- Caps / Standard
+
+FIGURES:
+- Lining / Oldstyle
+
+STORY:
+- Single-story / Double-story
+
+FAMILY SIZE:
+- 1-4, 5-10, 11-25, 25+
+
+=====================================
+4. DATABASE DESIGN (PostgreSQL preferred)
+=====================================
+Tables required:
+- fonts
+- font_files
+- families
+- designers/author/users (uploaders)
+- licenses
+- properties (normalized)
+- tags
+- previews
+- downloads
+
+Support indexing searches:
+- by name
+- by properties
+- by license

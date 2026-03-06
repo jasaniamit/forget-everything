@@ -1,0 +1,236 @@
+Willing to add properties panel just like attached:
+and here is the logic behind searchable criteria and stored in backend database table
+
+========================
+1. FONT INGESTION SYSTEM
+========================
+Must support:
+- upload: .ttf, .otf, .woff, .woff2, .zip
+- bulk import from folders
+- bulk import from open licensed sources (Google Fonts, Font Library, GNU Freefont, SIL OFL)
+- auto-zip unpack for families
+
+When a font is ingested:
+- store font file(s)
+- extract metadata
+- generate preview images
+- generate variable text specimen
+- store into DB
+
+===============================
+2. FONT METADATA EXTRACTION
+===============================
+Must extract from font tables:
+- name
+- family
+- style
+- weight (usWeightClass or panose)
+- width (usWidthClass or panose)
+- italic (italicAngle)
+- x-height/cap-height ratio
+- contrast (panose.bContrast)
+- figure style (lining/oldstyle)
+- caps (all caps / normal)
+- story style (single-story vs double-story 'a' and 'g')
+- number of fonts in family
+- license info (OFL, GPL, CC0, Proprietary, Unknown)
+
+Libraries allowed:
+- Python: fonttools
+- Node: opentype.js or fontkit
+
+Metadata must output JSON.
+
+==============================
+3. PROPERTY NORMALIZATION
+==============================
+Normalize extracted values into filterable buckets:
+
+WEIGHT:
+- Thin
+- Extra Light
+- Light
+- Regular
+- Medium
+- Semibold
+- Bold
+- Black
+
+WIDTH:
+- Ultra Condensed
+- Condensed
+- Normal
+- Expanded
+- Ultra Expanded
+
+X-HEIGHT:
+- Low
+- Medium
+- High
+(based on x-height / cap-height ratio)
+
+CONTRAST:
+- Low
+- Medium
+- High
+
+ITALICS:
+- Yes / No
+
+CASE:
+- Caps / Standard
+
+FIGURES:
+- Lining / Oldstyle
+
+STORY:
+- Single-story / Double-story
+
+FAMILY SIZE:
+- 1-4, 5-10, 11-25, 25+
+
+=====================================
+4. DATABASE DESIGN (PostgreSQL preferred)
+=====================================
+Tables required:
+- fonts
+- font_files
+- families
+- designers/author/users (uploaders)
+- licenses
+- properties (normalized)
+- tags
+- previews
+- downloads
+
+Support indexing searches:
+- by name
+- by properties
+- by license
+
+================================
+5. BACKEND API REQUIREMENTS
+================================
+Create REST API endpoints:
+
+POST /api/fonts/upload
+POST /api/fonts/bulk-import
+GET /api/fonts
+GET /api/fonts/{id}
+GET /api/filters
+GET /api/search?q=
+GET /api/families
+GET /api/licenses
+
+Return JSON for frontend consumption.
+
+Backend may be built using:
+- Node + Express
+OR
+- Python FastAPI
+Pick one and build fully.
+
+================================
+6. STORAGE REQUIREMENTS
+================================
+Storage options:
+- local + S3 adapter interface
+- store font files
+- store preview PNGs
+- store specimen text images
+
+=================================
+7. FRONTEND REQUIREMENTS (React)
+=================================
+Frontend must include:
+
+HOME PAGE
+- featured fonts
+- categories
+- search bar
+- filter panel
+
+FONT DETAILS PAGE
+- specimen preview with user text input
+- metadata display
+- family navigation
+- download button
+- license information
+
+FILTER PANEL
+Must copy Adobe Fonts style UI for Properties:
+(attached screenshot for reference or visit - https://fonts.adobe.com/fonts?browse_mode=default&cc=true&hide_images=true&max_styles=26&min_styles=1)
+
+Show the following selectors:
+- Weight (clickable icons)
+- Width
+- x-Height
+- Contrast
+- Italics
+- Caps Only
+- Story
+- Figures
+- Family Size slider
+
+Filtering behavior:
+- multi-select filters
+- debounce search
+- update results dynamically
+- show result count
+
+Tech stack must be:
+- React + Tailwind CSS
+- Componentized and reusable
+- Fast real-time filtering UI
+
+=================================
+8. USER-UPLOAD SYSTEM
+=================================
+Allow designers to:
+- create account
+- upload font files
+- choose license
+- set metadata manually if desired
+- auto-validation & asset preview
+
+=================================
+9. LICENSING SYSTEM
+=================================
+Support classification into:
+- Open Font License (OFL)
+- GPL
+- CC0/Public Domain
+- Shareware
+- Free For Personal Use
+- Commercial
+- Proprietary
+- Unknown
+
+User must accept terms before upload.
+
+=================================
+10. DEPLOYMENT READY
+=================================
+The final implementation must output:
+- backend code
+- frontend code
+- DB schema
+- API routes
+- storage config
+- example fonts
+- sample screenshots/gifs or docs
+
+=================================
+11. OPTIONAL BONUS (IF TIME PERMITS)
+=================================
+Add AI auto-tagging using:
+- image classification on specimens
+- font similarity suggestions
+- auto-category clustering
+
+=================================
+GOAL
+=================================
+End result = fully working clone of FontSpace/DaFont with Adobe Fonts property filtering and open licensing import system.
+
+DO NOT leave TODOs, placeholders, or half-implemented stubs. Implement as complete as possible with working logic, full code, comments, and documentation.

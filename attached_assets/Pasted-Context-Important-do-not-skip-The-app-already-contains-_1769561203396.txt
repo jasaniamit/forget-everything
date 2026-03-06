@@ -1,0 +1,183 @@
+Context (Important — do not skip)
+
+The app already contains:
+
+✔ basic type classifications such as:
+
+Serif
+
+Sans Serif
+
+Slab Serif
+
+Script
+
+Decorative
+
+Handwriting
+
+✔ and already added:
+
+categories[] array in font model
+
+search API reading from categories
+
+UI filter for these categories
+
+
+
+We are not removing or rewriting that.
+We are extending it into a complete font taxonomy + tagging system similar to dafont.com / fontspace.com / adobe fonts.
+
+PART 1 — Convert Existing Categories into Proper Taxonomy
+Convert the current existing categories into these buckets:
+Basic Styles:
+Sans Serif
+Serif
+Slab Serif
+Script
+Decorative
+Handwriting
+Store these as seed data in taxonomy tables.
+
+
+PART 2 — Add Additional Taxonomy Layers
+Add two additional layers:
+font_categories      (like “Trendy”, “Fun”, “Extreme”…)
+font_styles          (like “Tattoo”, “Retro”, “Calligraphy”…)
+font_characteristics (like “Bold”, “Thin”, “Wide”…)
+These are independent and filterable.
+NOTE: Existing basic categories go under font_styles automatically.
+
+PART 3 — DB Model Specification
+Create the following tables:
+
+font_categories
+  id
+  name
+  slug
+
+font_styles
+  id
+  category_id (FK to font_categories)
+  name
+  slug
+
+font_characteristics
+  id
+  name
+  slug
+
+And mapping tables for many-to-many:
+font_style_map
+  font_id
+  style_id
+
+font_characteristic_map
+  font_id
+  characteristic_id
+Fonts can have multiple styles and multiple characteristics.
+
+PART 4 — Keep Existing Classification Logic
+Do NOT remove or rewrite existing logic for:
+
+Serif detection
+Sans detection
+Script detection
+Slab Serif
+Decorative
+Handwriting
+
+Instead:
+Map that logic into the new taxonomy:
+
+Serif           → style: Serif
+Sans Serif      → style: Sans Serif
+Script          → style: Script
+Decorative      → style: Decorative
+Handwriting     → style: Handwriting
+Slab Serif      → style: Slab Serif
+This keeps compatibility with current code.
+
+PART 5 — Add Advanced Rule-Based Typographic Classification
+Implement glyph logic if not yet implemented:
+
+Glyph detection functions:
+→	detectAStory()
+→	detectGStory()
+→	detectFigureStyle()
+→	detectFigureWidth()
+→	detectCapsOnly()
+→	detectSmallCaps()
+
+Numeric figure inference:
+→	lining vs oldstyle via vertical alignment
+→	proportional vs tabular via advance widths
+
+Serif type inference via rule signatures:
+DIDONE           = high contrast + vertical stress + thin serif
+TRANSITIONAL     = med contrast + moderate stress
+OLDSTYLE         = low contrast + diagonal stress
+SLAB             = low contrast + heavy rectangular serif
+GEOMETRIC_SANS   = circular O + uniform strokes + no serif
+HUMANIST_SANS    = open apertures + diagonal stress
+GROTESK_SANS     = squarish counters + partial terminals
+MONO             = uniform advance width
+SCRIPT           = connected strokes
+HANDWRITING      = irregular strokes
+BLACKLETTER      = broken angular forms
+DISPLAY          = exaggerated proportions
+
+Store in:
+font_classification
+  serif_type ENUM
+  usage_tags []
+  mood_tags []
+
+PART 6 — Search API Extension
+Extend existing /api/fonts/search to support:
+?style=
+?category=
+?characteristic=
+
+Multiple filters allowed:
+/api/fonts/search?style=tattoo&characteristic=bold
+
+PART 7 — Admin Assignment UI
+Add multi-select assignment for:
+
+✔ Styles
+✔ Categories
+✔ Characteristics
+
+Must be DB-driven (NOT hard-coded).
+
+PART 8 — Frontend Filter UI
+Render filters similar to dafont.com:
+
+BASIC STYLES
+TRENDY STYLES
+FUN STYLES
+EXTREME STYLES
+OLDER STYLES
+PRESENT/FUTURE STYLES
+FAMOUS
+FOREIGN LOOK
+CHARACTERISTICS
+Selecting multiple filters narrows results (AND logic).
+
+PART 9 — Future-Proofing Rules
+Do not hardcode taxonomy lists in frontend
+Load entire taxonomy from DB
+Allow adding new styles/categories later without code changes
+
+
+
+
+
+
+
+
+
+
+
