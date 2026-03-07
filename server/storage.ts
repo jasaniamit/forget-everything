@@ -170,8 +170,10 @@ export class DatabaseStorage implements IStorage {
     if (seed && isDefaultBrowse) {
       // Default browse: weighted random rotation — popular fonts still surface but shuffled
       // COALESCE handles NULL downloadCount for fonts ingested via Python (bypasses Drizzle default)
+      // Use seed % 9973 (prime) to keep multiplication within PostgreSQL integer range (max ~2.1B)
+      const safeSeed = seed % 9973;
       fontResults = await query
-        .orderBy(sql`(COALESCE(${fonts.downloadCount}, 0) * 0.4 + (${seed} * ${fonts.id} % 1000) * 0.6) DESC`)
+        .orderBy(sql`(COALESCE(${fonts.downloadCount}, 0) * 0.4 + (${safeSeed} * ${fonts.id} % 1000) * 0.6) DESC`)
         .limit(limit).offset(offset);
     } else {
       // Search/filter active: stable sort by download count, NULL treated as 0
