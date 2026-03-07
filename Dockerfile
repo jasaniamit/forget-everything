@@ -3,14 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
-# Copy source
 COPY . .
-
-# Build client + server
 RUN npm run build
 
 # ── Stage 2: Production ──────────────────────────────────────────────────────
@@ -20,9 +16,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Only copy what's needed to run
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
