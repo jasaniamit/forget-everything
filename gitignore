@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+font-microservice/__pycache__/
+font-microservice/*.pyc
+font-microservice/venv/
+font-microservice/.venv/
+*.log
+server_log.txt
+inspection_result.txt
+ready_check_error.txt
+migration_log.txt
+.DS_Store

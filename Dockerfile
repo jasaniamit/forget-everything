@@ -5,31 +5,27 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
-# Copy all source
+# Copy source
 COPY . .
 
-# Build: vite (frontend) + esbuild (server) → dist/
+# Build client + server
 RUN npm run build
 
-# ── Stage 2: Production runtime ──────────────────────────────────────────────
+# ── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Production deps only
+# Only copy what's needed to run
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm ci --omit=dev
 
-# Copy built output from builder
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 5000
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget -qO- http://localhost:5000/api/taxonomy > /dev/null || exit 1
 
 CMD ["node", "dist/index.cjs"]

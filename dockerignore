@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+font-microservice
+*.log
+.git
+.gitignore
+README.md
+migration_log.txt
+inspection_result.txt
+server_log.txt
+ready_check_error.txt
