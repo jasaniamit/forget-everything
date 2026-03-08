@@ -1,358 +1,779 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Download, Undo, Redo, Eraser, Trash2, Move, ZoomIn, ZoomOut, RotateCcw, Layers, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Download, Undo2, Redo2, Trash2, RotateCcw,
+  ChevronUp, ChevronDown, Copy, ZoomIn, RotateCw, Eraser,
+} from "lucide-react";
 
-const ASSET_CATEGORIES = [
-  { id: 'shape', label: 'Shape', icon: 'https://emoji-maker.com/assets/img_tab/tab_selected_shape.png' },
-  { id: 'moreshape', label: 'More Shape', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_moreshape.png' },
-  { id: 'eyes', label: 'Eyes', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_eyes.png' },
-  { id: 'eyesbig', label: 'Eyes Big', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_eyesbig.png' },
-  { id: 'eyebrows', label: 'Eyebrows', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_eyebrows.png' },
-  { id: 'happymouth', label: 'Happy Mouth', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_happymouth.png' },
-  { id: 'sadmouth', label: 'Sad Mouth', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_sadmouth.png' },
-  { id: 'nose', label: 'Nose', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_nose.png' },
-  { id: 'beard', label: 'Beard', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_beard.png' },
-  { id: 'stache', label: 'Stache', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_stache.png' },
-  { id: 'glasses', label: 'Glasses', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_glasses.png' },
-  { id: 'hair', label: 'Hair', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_hair.png' },
-  { id: 'mask', label: 'Mask', icon: 'https://emoji-maker.com/assets/img_tab/tab_added_mask.png' },
-  { id: 'misc', label: 'Misc', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_misc.png' },
-  { id: 'hats', label: 'Hats', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_hats.png' },
-  { id: 'hands', label: 'Hands', icon: 'https://emoji-maker.com/assets/img_tab/tab_normal_hands.png' },
+// ─── Assets ───────────────────────────────────────────────────────────────────
+const BASE = "https://emoji-maker.com/assets/emojis";
+const CATS = [
+  { id: "Shape",       label: "Shape",       icon: "😶", count: 20 },
+  { id: "More Shape",  label: "More Shape",  icon: "⬤",  count: 15 },
+  { id: "Eyes",        label: "Eyes",        icon: "👀", count: 30 },
+  { id: "Eyes Big",    label: "Eyes Big",    icon: "😳", count: 20 },
+  { id: "Eyebrows",    label: "Eyebrows",    icon: "🤨", count: 20 },
+  { id: "Happy Mouth", label: "Happy Mouth", icon: "😄", count: 25 },
+  { id: "Sad Mouth",   label: "Sad Mouth",   icon: "😢", count: 20 },
+  { id: "Nose",        label: "Nose",        icon: "👃", count: 15 },
+  { id: "Beard",       label: "Beard",       icon: "🧔", count: 10 },
+  { id: "Stache",      label: "Stache",      icon: "🥸", count: 12 },
+  { id: "Glasses",     label: "Glasses",     icon: "🕶️", count: 15 },
+  { id: "Hair",        label: "Hair",        icon: "💇", count: 20 },
+  { id: "Mask",        label: "Mask",        icon: "😷", count: 10 },
+  { id: "Misc",        label: "Misc",        icon: "✨", count: 20 },
+  { id: "Hats",        label: "Hats",        icon: "🎩", count: 18 },
+  { id: "Hands",       label: "Hands",       icon: "✌️", count: 15 },
 ];
+const assetUrl = (cat: string, n: number) =>
+  `${BASE}/${encodeURIComponent(cat)}/${n}.png`;
 
-const getAssetUrls = (category: string, count: number) => {
-  const baseUrl = "https://emoji-maker.com/assets/emojis-thumb";
-  const catMap: Record<string, string> = {
-    shape: "Shape",
-    moreshape: "More Shape",
-    eyes: "Eyes",
-    eyesbig: "Eyes Big",
-    eyebrows: "Eyebrows",
-    happymouth: "Happy Mouth",
-    sadmouth: "Sad Mouth",
-    nose: "Nose",
-    beard: "Beard",
-    stache: "Stache",
-    glasses: "Glasses",
-    hair: "Hair",
-    mask: "Mask",
-    misc: "Misc",
-    hats: "Hats",
-    hands: "Hands"
-  };
-  return Array.from({ length: count }, (_, i) => `${baseUrl}/${catMap[category]}/${i + 1}.png`);
-};
-
-interface EmojiLayer {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Layer {
   id: string;
-  type: string;
   url: string;
-  x: number;
-  y: number;
-  scale: number;
-  zIndex: number;
+  cat: string;
+  left: number;   // % of stage width
+  top: number;    // % of stage height
+  w: number;      // px
+  h: number;      // px
+  rot: number;    // degrees
+  flipX: boolean;
+  z: number;      // stack order
 }
 
-export default function EmojiCreator() {
-  const [layers, setLayers] = useState<EmojiLayer[]>([]);
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('shape');
-  const [history, setHistory] = useState<EmojiLayer[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const canvasRef = useRef<HTMLDivElement>(null);
+const STAGE = 500;
 
-  const saveToHistory = (newLayers: EmojiLayer[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newLayers);
-    if (newHistory.length > 20) newHistory.shift();
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+const REPLACEABLE = new Set([
+  "Shape","More Shape","Eyes","Eyes Big","Eyebrows",
+  "Happy Mouth","Sad Mouth","Nose","Beard","Stache","Glasses","Hair","Mask",
+]);
+
+// Shape & More Shape share one slot; Eyes & Eyes Big share one slot
+const slot = (c: string) =>
+  c === "Shape" || c === "More Shape" ? "_face_" :
+  c === "Eyes"  || c === "Eyes Big"   ? "_eyes_" : c;
+
+const defSize = (c: string) =>
+  c === "Shape" || c === "More Shape" ? 400 :
+  c === "Hair"  || c === "Hats"       ? 280 :
+  c === "Hands"                       ? 220 :
+  c === "Beard" || c === "Stache"     ? 200 : 240;
+
+const defPos = (c: string): Pick<Layer, "left" | "top"> =>
+  c === "Shape" || c === "More Shape"      ? { left: 50, top: 50 } :
+  c === "Eyes"  || c === "Eyes Big"        ? { left: 50, top: 42 } :
+  c === "Eyebrows"                         ? { left: 50, top: 30 } :
+  c === "Happy Mouth" || c === "Sad Mouth" ? { left: 50, top: 70 } :
+  c === "Nose"    ? { left: 50, top: 56 } :
+  c === "Hair"    ? { left: 50, top: 15 } :
+  c === "Hats"    ? { left: 50, top:  8 } :
+  c === "Beard"   ? { left: 50, top: 75 } :
+  c === "Stache"  ? { left: 50, top: 65 } :
+  c === "Glasses" ? { left: 50, top: 42 } :
+  c === "Mask"    ? { left: 50, top: 60 } :
+  c === "Hands"   ? { left: 72, top: 72 } :
+  { left: 50, top: 50 };
+
+// ─── Thumbnail ────────────────────────────────────────────────────────────────
+function Thumb({ src, active, onAdd }: { src: string; active: boolean; onAdd: () => void }) {
+  return (
+    <button
+      onClick={onAdd}
+      className={`aspect-square rounded-xl p-1.5 border-2 transition-all hover:scale-105 active:scale-95 bg-zinc-50 ${
+        active ? "border-primary bg-primary/5 shadow-md" : "border-transparent hover:border-zinc-300"
+      }`}
+    >
+      <img
+        src={src} alt="" draggable={false}
+        onError={e => { (e.currentTarget.closest("button") as HTMLElement).style.display = "none"; }}
+        className="w-full h-full object-contain"
+      />
+    </button>
+  );
+}
+
+// ─── Toolbar button ───────────────────────────────────────────────────────────
+function TB({ children, onClick, disabled, title, danger }: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`p-2 rounded-xl border border-transparent transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+        danger
+          ? "text-zinc-500 hover:bg-red-50 hover:text-red-500"
+          : "text-zinc-600 hover:bg-zinc-100"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Selection handles ────────────────────────────────────────────────────────
+function Handles({
+  layer, stageEl, onResize, onRotate, onCommit,
+}: {
+  layer: Layer;
+  stageEl: HTMLDivElement | null;
+  onResize: (w: number) => void;
+  onRotate: (deg: number) => void;
+  onCommit: () => void;
+}) {
+  const PAD = 10;
+  const hw = layer.w / 2 + PAD;
+  const hh = layer.h / 2 + PAD;
+
+  const startResize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const ox = e.clientX;
+    const oy = e.clientY;
+    const startW = layer.w;
+    const onMove = (me: MouseEvent) => {
+      const d = (me.clientX - ox + (me.clientY - oy)) / 2;
+      onResize(Math.max(40, startW + d * 2));
+    };
+    const onUp = () => {
+      onCommit();
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
-  const addLayer = (type: string, url: string) => {
-    const existingLayerIdx = layers.findIndex(l => l.type === type);
-    let newLayers = [...layers];
-    
-    const newLayer: EmojiLayer = {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      url,
-      x: 0,
-      y: 0,
-      scale: 1,
-      zIndex: type === 'shape' || type === 'moreshape' ? 0 : layers.length + 1,
+  const startRotate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!stageEl) return;
+    const rect = stageEl.getBoundingClientRect();
+    const cx = rect.left + (layer.left / 100) * rect.width;
+    const cy = rect.top  + (layer.top  / 100) * rect.height;
+    const baseA  = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+    const startR = layer.rot;
+    const onMove = (me: MouseEvent) => {
+      const a = Math.atan2(me.clientY - cy, me.clientX - cx) * 180 / Math.PI;
+      onRotate(startR + (a - baseA));
+    };
+    const onUp = () => {
+      onCommit();
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const corners: [number, number][] = [
+    [-hw, -hh], [0, -hh], [hw, -hh],
+    [hw,  0],
+    [hw,  hh], [0, hh], [-hw, hh],
+    [-hw, 0],
+  ];
+
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${layer.left}%`,
+        top: `${layer.top}%`,
+        width: layer.w,
+        height: layer.h,
+        transform: `translate(-50%,-50%) rotate(${layer.rot}deg)`,
+        zIndex: 9999,
+      }}
+    >
+      {/* Border */}
+      <div
+        className="absolute border-2 border-primary/70 rounded pointer-events-none"
+        style={{ inset: -PAD }}
+      />
+
+      {/* Resize corners */}
+      {corners.map(([px, py], i) => (
+        <div
+          key={i}
+          onMouseDown={startResize}
+          className="absolute w-3 h-3 bg-white border-2 border-primary rounded-sm pointer-events-auto cursor-nwse-resize hover:bg-primary/20 transition-colors"
+          style={{
+            left: "50%",
+            top: "50%",
+            transform: `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`,
+          }}
+        />
+      ))}
+
+      {/* Line up to rotate handle */}
+      <div
+        className="absolute pointer-events-none bg-primary/40"
+        style={{
+          left: "50%",
+          top: 0,
+          width: 2,
+          height: hh + 28,
+          transform: "translateX(-50%) translateY(-100%)",
+        }}
+      />
+
+      {/* Rotate handle */}
+      <div
+        onMouseDown={startRotate}
+        className="absolute w-5 h-5 bg-primary rounded-full border-2 border-white shadow-md pointer-events-auto cursor-crosshair flex items-center justify-center"
+        style={{
+          left: "50%",
+          top: "50%",
+          transform: `translate(-50%, calc(-50% + ${-hh - 28}px))`,
+        }}
+      >
+        <RotateCw className="w-2.5 h-2.5 text-white" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function EmojiCreator() {
+  // ── Core state ───────────────────────────────────────────────────────────────
+  const [layers,    setLayers]    = useState<Layer[]>([]);
+  const [selId,     setSelId]     = useState<string | null>(null);
+  const [past,      setPast]      = useState<Layer[][]>([]);
+  const [future,    setFuture]    = useState<Layer[][]>([]);
+  const [activeCat, setActiveCat] = useState("Shape");
+  const [bgColor,   setBgColor]   = useState("transparent");
+
+  // Refs for event-handler access (no stale closures)
+  const stageRef  = useRef<HTMLDivElement>(null);
+  const dragRef   = useRef<{ id: string; sx: number; sy: number; sl: number; st: number } | null>(null);
+  const lRef      = useRef(layers);   lRef.current   = layers;
+  const selRef    = useRef(selId);    selRef.current = selId;
+
+  const sel = layers.find(l => l.id === selId) ?? null;
+
+  // ── History helpers ──────────────────────────────────────────────────────────
+  // Call BEFORE mutating layers to save the old state
+  const saveHistory = useCallback((current: Layer[]) => {
+    setPast(p => [...p, current.map(l => ({ ...l }))].slice(-40));
+    setFuture([]);
+  }, []);
+
+  const undo = useCallback(() => {
+    setPast(p => {
+      if (p.length === 0) return p;
+      const prev = p[p.length - 1];
+      setFuture(f => [lRef.current.map(l => ({ ...l })), ...f].slice(0, 40));
+      setLayers(prev.map(l => ({ ...l })));
+      setSelId(null);
+      return p.slice(0, -1);
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setFuture(f => {
+      if (f.length === 0) return f;
+      const next = f[0];
+      setPast(p => [...p, lRef.current.map(l => ({ ...l }))].slice(-40));
+      setLayers(next.map(l => ({ ...l })));
+      setSelId(null);
+      return f.slice(1);
+    });
+  }, []);
+
+  // ── Drag ─────────────────────────────────────────────────────────────────────
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragRef.current || !stageRef.current) return;
+    const rect = stageRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - dragRef.current.sx) / rect.width)  * 100;
+    const dy = ((e.clientY - dragRef.current.sy) / rect.height) * 100;
+    const { id, sl, st } = dragRef.current;
+    setLayers(prev => prev.map(l =>
+      l.id === id ? { ...l, left: sl + dx, top: st + dy } : l
+    ));
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    if (!dragRef.current) return;
+    // Save history after drag ends
+    saveHistory(lRef.current);
+    dragRef.current = null;
+  }, [saveHistory]);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup",   onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup",   onMouseUp);
+    };
+  }, [onMouseMove, onMouseUp]);
+
+  // ── Keyboard ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      const ctrl = e.metaKey || e.ctrlKey;
+      const k    = e.key;
+
+      if (k === "Escape") { setSelId(null); return; }
+
+      if (k === "Delete" || k === "Backspace") {
+        const id = selRef.current;
+        if (!id) return;
+        saveHistory(lRef.current);
+        setLayers(prev => prev.filter(l => l.id !== id));
+        setSelId(null);
+        return;
+      }
+
+      if (ctrl && k.toLowerCase() === "z" && !e.shiftKey) {
+        e.preventDefault(); undo(); return;
+      }
+      if (ctrl && (k.toLowerCase() === "y" || (e.shiftKey && k.toLowerCase() === "z"))) {
+        e.preventDefault(); redo(); return;
+      }
+
+      if (ctrl && k.toLowerCase() === "d") {
+        e.preventDefault();
+        const id = selRef.current;
+        const orig = lRef.current.find(l => l.id === id);
+        if (!orig) return;
+        const copy: Layer = { ...orig, id: crypto.randomUUID(), left: orig.left + 3, top: orig.top + 3, z: lRef.current.length };
+        saveHistory(lRef.current);
+        setLayers(prev => [...prev, copy]);
+        setSelId(copy.id);
+        return;
+      }
+
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(k)) {
+        const id = selRef.current;
+        if (!id) return;
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        const dx = k === "ArrowLeft" ? -step : k === "ArrowRight" ? step : 0;
+        const dy = k === "ArrowUp"   ? -step : k === "ArrowDown"  ? step : 0;
+        setLayers(prev => prev.map(l =>
+          l.id === id
+            ? { ...l, left: l.left + (dx * 100) / STAGE, top: l.top + (dy * 100) / STAGE }
+            : l
+        ));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo, saveHistory]);
+
+  // ── Add layer ─────────────────────────────────────────────────────────────────
+  const addLayer = (cat: string, n: number) => {
+    const pos = defPos(cat);
+    const newLayer: Layer = {
+      id: crypto.randomUUID(),
+      url: assetUrl(cat, n),
+      cat,
+      ...pos,
+      w: defSize(cat),
+      h: defSize(cat),
+      rot: 0,
+      flipX: false,
+      z: lRef.current.length,
     };
 
-    if (existingLayerIdx > -1) {
-      newLayers[existingLayerIdx] = { ...newLayers[existingLayerIdx], url };
-    } else {
-      newLayers.push(newLayer);
-    }
-    
-    setLayers(newLayers);
-    setSelectedLayerId(newLayer.id);
-    saveToHistory(newLayers);
-  };
+    saveHistory(lRef.current);
 
-  const removeLayer = (id: string) => {
-    const newLayers = layers.filter(l => l.id !== id);
-    setLayers(newLayers);
-    if (selectedLayerId === id) setSelectedLayerId(null);
-    saveToHistory(newLayers);
-  };
-
-  const updateLayer = (id: string, updates: Partial<EmojiLayer>) => {
-    const newLayers = layers.map(l => l.id === id ? { ...l, ...updates } : l);
-    setLayers(newLayers);
-  };
-
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const prev = history[historyIndex - 1];
-      setLayers(prev);
-      setHistoryIndex(historyIndex - 1);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const next = history[historyIndex + 1];
-      setLayers(next);
-      setHistoryIndex(historyIndex + 1);
-    }
-  };
-
-  const downloadEmoji = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
-    let loaded = 0;
-    sortedLayers.forEach(layer => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = layer.url;
-      img.onload = () => {
-        const size = 300 * layer.scale;
-        ctx.drawImage(
-          img, 
-          256 + layer.x - size/2, 
-          256 + layer.y - size/2, 
-          size, 
-          size
-        );
-        loaded++;
-        if (loaded === sortedLayers.length) {
-          const link = document.createElement('a');
-          link.download = 'my-emoji.png';
-          link.href = canvas.toDataURL();
-          link.click();
+    setLayers(prev => {
+      if (REPLACEABLE.has(cat)) {
+        const idx = prev.findIndex(l => slot(l.cat) === slot(cat));
+        if (idx >= 0) {
+          return prev.map((l, i) => i === idx
+            ? { ...newLayer, id: l.id, left: l.left, top: l.top, w: l.w, h: l.h, rot: l.rot, z: l.z }
+            : l
+          );
         }
-      };
+      }
+      return [...prev, newLayer];
+    });
+
+    setSelId(newLayer.id);
+  };
+
+  // ── Mutate selected ────────────────────────────────────────────────────────────
+  const updateSel = (patch: Partial<Layer>) => {
+    if (!selId) return;
+    setLayers(prev => prev.map(l => l.id === selId ? { ...l, ...patch } : l));
+  };
+
+  const commitSel = () => saveHistory(lRef.current);
+
+  const deleteSel = () => {
+    if (!selId) return;
+    saveHistory(lRef.current);
+    setLayers(prev => prev.filter(l => l.id !== selId));
+    setSelId(null);
+  };
+
+  const moveZ = (dir: 1 | -1) => {
+    if (!selId) return;
+    setLayers(prev => {
+      const idx = prev.findIndex(l => l.id === selId);
+      if (idx < 0) return prev;
+      const t = idx + dir;
+      if (t < 0 || t >= prev.length) return prev;
+      saveHistory(prev);
+      const next = [...prev];
+      // Swap the z values so sort-by-z rendering order actually changes
+      const zA = next[idx].z;
+      const zB = next[t].z;
+      next[idx] = { ...next[idx], z: zB };
+      next[t]   = { ...next[t],   z: zA };
+      return next;
     });
   };
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans">
-      <Navbar />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Canvas Section */}
-          <div className="flex-1 flex flex-col items-center gap-8 w-full">
-            <div className="relative group w-full max-w-[500px]">
-              <Card className="aspect-square bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] relative overflow-hidden border-none flex items-center justify-center p-12">
-                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
-                
-                <div ref={canvasRef} className="relative w-full h-full">
-                  {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (
-                    <div
-                      key={layer.id}
-                      className={cn(
-                        "absolute cursor-grab active:cursor-grabbing transition-all duration-200",
-                        selectedLayerId === layer.id && "scale-105 z-50"
-                      )}
-                      style={{
-                        left: `calc(50% + ${layer.x}px)`,
-                        top: `calc(50% + ${layer.y}px)`,
-                        transform: `translate(-50%, -50%) scale(${layer.scale})`,
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        setSelectedLayerId(layer.id);
-                        const startX = e.clientX - layer.x;
-                        const startY = e.clientY - layer.y;
-                        
-                        const handleMouseMove = (moveEvent: MouseEvent) => {
-                          updateLayer(layer.id, {
-                            x: moveEvent.clientX - startX,
-                            y: moveEvent.clientY - startY
-                          });
-                        };
-                        
-                        const handleMouseUp = () => {
-                          window.removeEventListener('mousemove', handleMouseMove);
-                          window.removeEventListener('mouseup', handleMouseUp);
-                          saveToHistory(layers);
-                        };
-                        
-                        window.addEventListener('mousemove', handleMouseMove);
-                        window.addEventListener('mouseup', handleMouseUp);
-                      }}
-                    >
-                      <img src={layer.url} alt={layer.type} className="w-64 h-64 object-contain pointer-events-none drop-shadow-2xl" />
-                      {selectedLayerId === layer.id && (
-                        <div className="absolute -inset-4 border-2 border-primary/30 rounded-full animate-pulse" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
+  const duplicateSel = () => {
+    if (!sel) return;
+    const copy: Layer = { ...sel, id: crypto.randomUUID(), left: sel.left + 3, top: sel.top + 3, z: layers.length };
+    saveHistory(layers);
+    setLayers(prev => [...prev, copy]);
+    setSelId(copy.id);
+  };
 
-            <div className="flex flex-wrap justify-center gap-4 bg-white p-4 rounded-3xl shadow-lg border border-border/50">
-              <Button variant="ghost" size="icon" onClick={handleUndo} disabled={historyIndex <= 0} className="hover:bg-primary/5 rounded-2xl h-12 w-12">
-                <Undo className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="hover:bg-primary/5 rounded-2xl h-12 w-12">
-                <Redo className="h-5 w-5" />
-              </Button>
-              <div className="w-px bg-border mx-2" />
-              <Button variant="ghost" size="icon" onClick={() => { setLayers([]); setHistory([]); setHistoryIndex(-1); }} className="hover:bg-destructive/5 hover:text-destructive rounded-2xl h-12 w-12">
-                <Eraser className="h-5 w-5" />
-              </Button>
-              <Button className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-10 h-12 font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95" onClick={downloadEmoji}>
-                <Download className="mr-2 h-5 w-5" /> Export Emoji
-              </Button>
+  // ── Export ────────────────────────────────────────────────────────────────────
+  const exportPng = async () => {
+    const SIZE = 1024;                          // 2× for crisp output
+    const sc   = SIZE / STAGE;
+    const canvas = document.createElement("canvas");
+    canvas.width  = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext("2d")!;
+
+    // Transparent PNG by default — canvas is already clear, nothing to fill.
+    // Only fill if user explicitly chose a background colour.
+    if (bgColor !== "transparent") {
+      ctx.fillStyle = bgColor;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, SIZE, SIZE, Math.round(72 * sc));
+      ctx.fill();
+    }
+
+    // Draw each layer via server proxy (avoids CORS canvas taint)
+    for (const layer of [...layers].sort((a, b) => a.z - b.z)) {
+      await new Promise<void>(res => {
+        const img    = new Image();
+        const proxied = `/api/image-proxy?url=${encodeURIComponent(layer.url)}`;
+        img.onload = () => {
+          ctx.save();
+          ctx.translate((layer.left / 100) * SIZE, (layer.top / 100) * SIZE);
+          ctx.rotate(layer.rot * Math.PI / 180);
+          if (layer.flipX) ctx.scale(-1, 1);
+          const iw = layer.w * sc;
+          const ih = layer.h * sc;
+          ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
+          ctx.restore();
+          res();
+        };
+        img.onerror = () => res();
+        img.src = proxied;
+      });
+    }
+
+    const a = document.createElement("a");
+    a.download = "my-emoji.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+  const catDef    = CATS.find(c => c.id === activeCat)!;
+  const thumbs    = Array.from({ length: catDef.count }, (_, i) => assetUrl(activeCat, i + 1));
+  const activeUrl = layers.find(l => slot(l.cat) === slot(activeCat))?.url;
+
+  const BG_PRESETS = [
+    "transparent","#FFFFFF","#FFF9DB","#FFD93D",
+    "#FF6B6B","#74C0FC","#51CF66","#CC5DE8","#FFA94D","#1A1A2E",
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#ECEEF2]">
+      <Navbar />
+      <div className="max-w-[1440px] mx-auto px-4 py-5 flex gap-4 items-start">
+
+        {/* ── Category sidebar ── */}
+        <div
+          className="flex-shrink-0 bg-white rounded-2xl shadow border border-zinc-100 overflow-hidden"
+          style={{ width: 72 }}
+        >
+          <div className="py-2 flex flex-col gap-0.5">
+            {CATS.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setActiveCat(c.id)}
+                title={c.label}
+                className={`flex flex-col items-center gap-1 py-3 px-1 text-center transition-all ${
+                  activeCat === c.id
+                    ? "bg-primary/10 text-primary border-r-2 border-primary"
+                    : "text-zinc-500 hover:bg-zinc-50"
+                }`}
+              >
+                <span className="text-xl">{c.icon}</span>
+                <span className="text-[9px] font-black uppercase tracking-tight leading-tight">{c.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Stage + controls ── */}
+        <div className="flex flex-col gap-3 flex-shrink-0" style={{ width: STAGE }}>
+
+          {/* Stage */}
+          <div
+            ref={stageRef}
+            className="relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-200 select-none"
+            style={{
+              width: STAGE,
+              height: STAGE,
+              background: bgColor === "transparent"
+                ? "repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 0 0 / 20px 20px"
+                : bgColor,
+              cursor: "default",
+            }}
+            onMouseDown={e => {
+              if (e.target === e.currentTarget) setSelId(null);
+            }}
+          >
+            {[...layers].sort((a, b) => a.z - b.z).map(layer => (
+              <div
+                key={layer.id}
+                onMouseDown={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setSelId(layer.id);
+                  dragRef.current = {
+                    id: layer.id,
+                    sx: e.clientX, sy: e.clientY,
+                    sl: layer.left, st: layer.top,
+                  };
+                }}
+                className="absolute cursor-move"
+                style={{
+                  left: `${layer.left}%`,
+                  top: `${layer.top}%`,
+                  width: layer.w,
+                  height: layer.h,
+                  transform: `translate(-50%,-50%) rotate(${layer.rot}deg) scaleX(${layer.flipX ? -1 : 1})`,
+                  zIndex: layer.z + 1,
+                }}
+              >
+                <img
+                  src={layer.url} alt="" draggable={false}
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+              </div>
+            ))}
+
+            {sel && (
+              <Handles
+                layer={sel}
+                stageEl={stageRef.current}
+                onResize={w   => updateSel({ w, h: w })}
+                onRotate={deg => updateSel({ rot: Math.round(deg) })}
+                onCommit={commitSel}
+              />
+            )}
+
+            {layers.length === 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <div className="text-6xl opacity-10 mb-3">😶</div>
+                <p className="text-zinc-400 text-sm font-medium">Pick a Shape to start →</p>
+              </div>
+            )}
+          </div>
+
+          {/* Toolbar */}
+          <div className="bg-white rounded-2xl px-4 py-2.5 flex items-center gap-1.5 shadow border border-zinc-100">
+            <TB onClick={undo} disabled={past.length === 0}   title="Undo (Ctrl+Z)"><Undo2 className="w-4 h-4" /></TB>
+            <TB onClick={redo} disabled={future.length === 0} title="Redo (Ctrl+Y)"><Redo2 className="w-4 h-4" /></TB>
+            <div className="w-px h-5 bg-zinc-200 mx-1" />
+            {sel && (<>
+              <TB onClick={() => moveZ(1)}  title="Bring Forward"><ChevronUp   className="w-4 h-4" /></TB>
+              <TB onClick={() => moveZ(-1)} title="Send Backward"><ChevronDown className="w-4 h-4" /></TB>
+              <TB
+                title="Flip Horizontal"
+                onClick={() => { updateSel({ flipX: !sel.flipX }); commitSel(); }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/>
+                  <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/>
+                  <path d="M12 20v2"/><path d="M12 14v2"/><path d="M12 8v2"/><path d="M12 2v2"/>
+                </svg>
+              </TB>
+              <TB onClick={duplicateSel} title="Duplicate (Ctrl+D)"><Copy  className="w-4 h-4" /></TB>
+              <TB onClick={deleteSel}   title="Delete (Del)" danger><Trash2 className="w-4 h-4" /></TB>
+              <div className="w-px h-5 bg-zinc-200 mx-1" />
+            </>)}
+            <TB
+              title="Clear all"
+              onClick={() => { saveHistory(layers); setLayers([]); setSelId(null); }}
+            >
+              <Eraser className="w-4 h-4" />
+            </TB>
+            <div className="flex-1" />
+            <button
+              onClick={exportPng}
+              className="flex items-center gap-2 bg-primary text-white font-bold px-5 py-2 rounded-xl hover:opacity-90 active:scale-95 transition-all text-sm shadow-sm"
+            >
+              <Download className="w-4 h-4" /> Export PNG
+            </button>
+          </div>
+
+          {/* Selected layer controls */}
+          {sel && (
+            <div className="bg-white rounded-2xl p-4 shadow border border-zinc-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{sel.cat}</span>
+                <button
+                  onClick={() => { updateSel(defPos(sel.cat)); commitSel(); }}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset pos
+                </button>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-xs font-bold text-zinc-500 flex items-center gap-1">
+                    <ZoomIn className="w-3 h-3" /> Size
+                  </span>
+                  <span className="text-xs font-bold text-primary">{Math.round(sel.w)}px</span>
+                </div>
+                <input
+                  type="range" min={40} max={500} step={4}
+                  value={sel.w}
+                  onChange={e => updateSel({ w: +e.target.value, h: +e.target.value })}
+                  onMouseUp={commitSel}
+                  className="w-full h-1.5 appearance-none rounded-full bg-zinc-200 accent-primary cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-xs font-bold text-zinc-500 flex items-center gap-1">
+                    <RotateCw className="w-3 h-3" /> Rotation
+                  </span>
+                  <span className="text-xs font-bold text-primary">{Math.round(sel.rot)}°</span>
+                </div>
+                <input
+                  type="range" min={-180} max={180} step={1}
+                  value={sel.rot}
+                  onChange={e => updateSel({ rot: +e.target.value })}
+                  onMouseUp={commitSel}
+                  className="w-full h-1.5 appearance-none rounded-full bg-zinc-200 accent-primary cursor-pointer"
+                />
+              </div>
+
+              <div className="flex gap-1.5">
+                {[-90, -45, 0, 45, 90].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => { updateSel({ rot: d }); commitSel(); }}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                      Math.round(sel.rot) === d
+                        ? "bg-primary text-white border-primary"
+                        : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-400"
+                    }`}
+                  >
+                    {d}°
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Background */}
+          <div className="bg-white rounded-2xl p-4 shadow border border-zinc-100">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-400 block mb-3">Background</span>
+            <div className="flex flex-wrap gap-2">
+              {BG_PRESETS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setBgColor(c)}
+                  className={`w-9 h-9 rounded-xl border-2 transition-all hover:scale-110 overflow-hidden ${
+                    bgColor === c ? "border-primary scale-110 shadow-md" : "border-transparent"
+                  }`}
+                  style={c === "transparent" ? {} : {
+                    background: c,
+                    boxShadow: c === "#FFFFFF" ? "inset 0 0 0 1px #ddd" : undefined,
+                  }}
+                >
+                  {c === "transparent" && (
+                    <div className="w-full h-full" style={{
+                      background: "repeating-conic-gradient(#ccc 0% 25%, white 0% 50%) 0 0 / 10px 10px",
+                    }} />
+                  )}
+                </button>
+              ))}
+              <label className="w-9 h-9 rounded-xl border-2 border-dashed border-zinc-300 hover:border-primary flex items-center justify-center cursor-pointer hover:scale-110 transition-all">
+                <span className="text-zinc-400 font-bold">+</span>
+                <input
+                  type="color"
+                  defaultValue="#ffffff"
+                  onChange={e => setBgColor(e.target.value)}
+                  className="sr-only"
+                />
+              </label>
             </div>
           </div>
 
-          {/* Assets Sidebar */}
-          <Card className="w-full lg:w-[450px] h-[800px] border-none rounded-[40px] overflow-hidden flex flex-col shadow-2xl bg-white">
-            <div className="p-6 border-b bg-secondary/5">
-              <h2 className="text-xl font-black text-primary flex items-center gap-2">
-                <Layers className="h-6 w-6" /> Emoji Designer
-              </h2>
+          {/* Shortcuts */}
+          <div className="bg-white/70 rounded-xl px-4 py-2.5 border border-zinc-100">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400 font-medium">
+              {[["Del","Delete"],["Ctrl+Z","Undo"],["Ctrl+Y","Redo"],["Ctrl+D","Duplicate"],["↑↓←→","Nudge"],["Esc","Deselect"]].map(([k,v]) => (
+                <span key={k}>
+                  <kbd className="bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600 font-mono text-[10px]">{k}</kbd> {v}
+                </span>
+              ))}
             </div>
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-              <div className="bg-white border-b overflow-x-auto no-scrollbar">
-                <TabsList className="h-20 bg-transparent gap-2 px-6 flex justify-start min-w-max">
-                  {ASSET_CATEGORIES.map(cat => (
-                    <TabsTrigger 
-                      key={cat.id} 
-                      value={cat.id} 
-                      className="data-[state=active]:bg-primary/5 data-[state=active]:text-primary flex flex-col items-center gap-1 px-4 h-14 rounded-2xl transition-all border border-transparent data-[state=active]:border-primary/10"
-                    >
-                      <img src={cat.icon} alt={cat.label} className="w-6 h-6 grayscale data-[state=active]:grayscale-0" />
-                      <span className="text-[10px] font-black uppercase tracking-tighter">{cat.label}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                {ASSET_CATEGORIES.map(cat => (
-                  <TabsContent key={cat.id} value={cat.id} className="mt-0 grid grid-cols-4 gap-6 outline-none">
-                    {getAssetUrls(cat.id, 40).map((url, i) => (
-                      <button
-                        key={i}
-                        onClick={() => addLayer(cat.id, url)}
-                        className="group relative aspect-square p-2 bg-secondary/10 hover:bg-primary/5 rounded-[20px] transition-all hover:scale-110 active:scale-90 border border-transparent hover:border-primary/20"
-                      >
-                        <img src={url} alt={`${cat.label} ${i}`} className="w-full h-auto drop-shadow-sm" />
-                        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 rounded-[20px] transition-opacity flex items-center justify-center">
-                          <Plus className="h-6 w-6 text-primary" />
-                        </div>
-                      </button>
-                    ))}
-                  </TabsContent>
-                ))}
-              </div>
-            </Tabs>
-            
-            {selectedLayerId && (
-              <div className="p-8 border-t bg-primary/[0.02] space-y-6 animate-in slide-in-from-bottom-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/40">Adjust Layer</span>
-                    <span className="text-sm font-bold text-primary capitalize">{layers.find(l => l.id === selectedLayerId)?.type} Controls</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive/40 hover:text-destructive hover:bg-destructive/5 rounded-xl" onClick={() => removeLayer(selectedLayerId)}>
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-2">
-                        <ZoomIn className="h-3 w-3" /> Resize
-                      </span>
-                      <span className="text-[11px] font-bold text-primary/60">{Math.round((layers.find(l => l.id === selectedLayerId)?.scale || 1) * 100)}%</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="0.3" 
-                      max="2.5" 
-                      step="0.05"
-                      value={layers.find(l => l.id === selectedLayerId)?.scale || 1}
-                      onChange={(e) => updateLayer(selectedLayerId, { scale: parseFloat(e.target.value) })}
-                      onMouseUp={() => saveToHistory(layers)}
-                      className="w-full h-1.5 bg-primary/10 rounded-full appearance-none cursor-pointer accent-primary"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" className="h-12 rounded-2xl border-primary/10 hover:bg-primary/5 text-primary font-bold gap-2" onClick={() => updateLayer(selectedLayerId, { x: 0, y: 0 })}>
-                      <RotateCcw className="h-4 w-4" /> Center
-                    </Button>
-                    <div className="flex border rounded-2xl overflow-hidden border-primary/10">
-                       <Button 
-                        variant="ghost" 
-                        className="flex-1 h-12 rounded-none border-r border-primary/10 hover:bg-primary/5"
-                        onClick={() => {
-                          const layer = layers.find(l => l.id === selectedLayerId);
-                          if (layer) updateLayer(selectedLayerId, { zIndex: layer.zIndex - 1 });
-                        }}
-                      >
-                        <Layers className="h-4 w-4 rotate-180" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        className="flex-1 h-12 rounded-none hover:bg-primary/5"
-                        onClick={() => {
-                          const layer = layers.find(l => l.id === selectedLayerId);
-                          if (layer) updateLayer(selectedLayerId, { zIndex: layer.zIndex + 1 });
-                        }}
-                      >
-                        <Layers className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
+          </div>
         </div>
-      </main>
 
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
-      `}</style>
+        {/* ── Asset grid ── */}
+        <div
+          className="flex-1 bg-white rounded-2xl shadow border border-zinc-100 overflow-hidden flex flex-col"
+          style={{ minHeight: 700 }}
+        >
+          <div className="p-4 border-b border-zinc-100 bg-zinc-50/60">
+            <h3 className="font-black text-zinc-700">{catDef.label}</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {REPLACEABLE.has(activeCat) ? "Replaces existing · " : "Layers on top · "}Click to add
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="grid grid-cols-4 gap-3">
+              {thumbs.map((u, i) => (
+                <Thumb
+                  key={u}
+                  src={u}
+                  active={activeUrl === u}
+                  onAdd={() => addLayer(activeCat, i + 1)}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-zinc-100 px-4 py-3 bg-zinc-50/50">
+            <p className="text-xs text-zinc-400 font-medium">
+              Drag to move · Corner handles to resize · Top handle to rotate
+            </p>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

@@ -56,11 +56,11 @@ def insert_font(conn, font: dict) -> bool:
             INSERT INTO fonts (
                 name, family, use_case, license, designer,
                 file_url, description, weight, width, x_height,
-                contrast, italics, family_size, subsets
+                contrast, italics, family_size, subsets, download_count
             ) VALUES (
                 %(name)s, %(family)s, %(use_case)s, %(license)s, %(designer)s,
                 %(file_url)s, %(description)s, %(weight)s, %(width)s, %(x_height)s,
-                %(contrast)s, %(italics)s, %(family_size)s, %(subsets)s
+                %(contrast)s, %(italics)s, %(family_size)s, %(subsets)s, 0
             )
         """, {
             "name": font.get("name"),
@@ -442,11 +442,252 @@ def ingest_fontsquirrel(limit: int = 200) -> list[dict]:
     return fonts
 
 
+
+# ── New sources to append to font_ingester.py ────────────────────────────────
+
+def ingest_dafont(limit: int = 5000) -> list[dict]:
+    """
+    DaFont — 80,000+ free fonts browsable by alphabet.
+    Scrapes: https://www.dafont.com/alpha.php?lettre=a&page=1&fpp=200
+    Each page has up to 200 fonts. 26 letters × many pages = 80K+ total.
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    print(f"\n[DaFont] Scraping up to {limit} fonts...")
+    fonts = []
+    letters = "abcdefghijklmnopqrstuvwxyz0"  # 0 = numeric/symbols
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    CATEGORY_MAP = {
+        "Serif": "serif", "Sans Serif": "sans-serif", "Script": "script",
+        "Display": "decorative", "Handwritten": "handwriting",
+        "Decorative": "decorative", "Techno": "tech", "Gothic": "serif",
+        "Various": "decorative", "Fancy": "decorative", "Basic": "sans-serif",
+    }
+
+    for letter in letters:
+        if len(fonts) >= limit:
+            break
+        page = 1
+        while len(fonts) < limit:
+            url = f"https://www.dafont.com/alpha.php?lettre={letter}&page={page}&fpp=200&text=The+quick+brown+fox"
+            try:
+                r = requests.get(url, headers=headers, timeout=15)
+                if r.status_code != 200:
+                    break
+                soup = BeautifulSoup(r.text, "html.parser")
+                font_blocks = soup.select("div.fontpreview")
+                if not font_blocks:
+                    # Try alternate selector
+                    font_blocks = soup.select("div.preview")
+                if not font_blocks:
+                    break
+
+                page_count = 0
+                for block in font_blocks:
+                    name_el = block.select_one("h2 a, .fontname a, h2")
+                    if not name_el:
+                        continue
+                    name = name_el.get_text(strip=True)
+                    if not name:
+                        continue
+
+                    # Get author
+                    author_el = block.select_one("span.byauthor a, .author a")
+                    author = author_el.get_text(strip=True) if author_el else "Unknown"
+
+                    # Get category
+                    cat_el = block.select_one("small a, .categ a")
+                    category = cat_el.get_text(strip=True) if cat_el else "Various"
+                    use_case_str = CATEGORY_MAP.get(category, "creative")
+
+                    # Font slug for download URL
+                    href = name_el.get("href", "")
+                    slug_match = re.search(r"/([^/]+)$", href)
+                    slug = slug_match.group(1) if slug_match else name.lower().replace(" ", "-")
+
+                    fonts.append({
+                        "name": name,
+                        "family": name,
+                        "use_case": json.dumps([use_case_str]),
+                        "license": "Free",
+                        "designer": author,
+                        "file_url": f"https://dl.dafont.com/dl/?f={slug}",
+                        "description": f"{name} is a free {category.lower()} font by {author} available on DaFont.",
+                        "family_size": 1,
+                        "subsets": json.dumps(["latin"]),
+                    })
+                    page_count += 1
+                    if len(fonts) >= limit:
+                        break
+
+                print(f"  Letter '{letter}' page {page}: +{page_count} fonts ({len(fonts)} total)")
+                if page_count < 100:  # Less than half page = last page
+                    break
+                page += 1
+                time.sleep(0.5)  # Be polite to DaFont
+
+            except Exception as e:
+                print(f"  Error on letter '{letter}' page {page}: {e}")
+                break
+
+    print(f"  DaFont total: {len(fonts)} fonts")
+    return fonts[:limit]
+
+
+def ingest_fontspace(limit: int = 5000) -> list[dict]:
+    """
+    FontSpace — 80,000+ free fonts with JSON API.
+    API: https://www.fontspace.com/api/fonts?page=1&perPage=50
+    """
+    print(f"\n[FontSpace] Fetching up to {limit} fonts via API...")
+    fonts = []
+    page = 1
+    per_page = 50
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept": "application/json",
+        "Referer": "https://www.fontspace.com/",
+    }
+
+    while len(fonts) < limit:
+        try:
+            r = requests.get(
+                f"https://www.fontspace.com/api/fonts",
+                params={"page": page, "perPage": per_page, "sort": "popular"},
+                headers=headers,
+                timeout=15,
+            )
+            if r.status_code != 200:
+                print(f"  HTTP {r.status_code} — stopping")
+                break
+
+            data = r.json()
+            items = data.get("items", data.get("fonts", data if isinstance(data, list) else []))
+            if not items:
+                break
+
+            for item in items:
+                name = item.get("name", item.get("title", ""))
+                if not name:
+                    continue
+                author = item.get("designer", item.get("author", item.get("user", {}).get("name", "Unknown")))
+                if isinstance(author, dict):
+                    author = author.get("name", "Unknown")
+                slug = item.get("slug", item.get("urlName", name.lower().replace(" ", "-")))
+                category = item.get("category", item.get("classification", "Sans Serif"))
+                license_name = item.get("license", item.get("licenseType", "Free"))
+
+                fonts.append({
+                    "name": name,
+                    "family": name,
+                    "use_case": json.dumps(["creative"]),
+                    "license": str(license_name),
+                    "designer": str(author) if author else "Unknown",
+                    "file_url": f"https://www.fontspace.com/{slug}",
+                    "description": f"{name} is a free {category} font available on FontSpace.",
+                    "family_size": item.get("styles", item.get("styleCount", 1)),
+                    "subsets": json.dumps(["latin"]),
+                })
+
+            print(f"  Page {page}: +{len(items)} fonts ({len(fonts)} total)")
+            if len(items) < per_page:
+                break
+            page += 1
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"  Error on page {page}: {e}")
+            break
+
+    print(f"  FontSpace total: {len(fonts)} fonts")
+    return fonts[:limit]
+
+
+def ingest_1001fonts(limit: int = 3000) -> list[dict]:
+    """
+    1001Fonts — 15,000+ free fonts, paginated HTML scraping.
+    URL: https://www.1001fonts.com/search.php?page=1&perpage=50
+    """
+    from bs4 import BeautifulSoup
+    print(f"\n[1001Fonts] Scraping up to {limit} fonts...")
+    fonts = []
+    page = 1
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept": "text/html",
+    }
+
+    while len(fonts) < limit:
+        try:
+            r = requests.get(
+                f"https://www.1001fonts.com/search.php",
+                params={"page": page, "perpage": 50},
+                headers=headers,
+                timeout=15,
+            )
+            if r.status_code != 200:
+                break
+            soup = BeautifulSoup(r.text, "html.parser")
+            items = soup.select("li.font-item, div.font-item, article.font-item")
+            if not items:
+                # Try alternate selector for their newer layout
+                items = soup.select("[class*='font-list'] li, [class*='font-item']")
+            if not items:
+                break
+
+            page_count = 0
+            for item in items:
+                name_el = item.select_one("h2 a, h3 a, .font-name a, a.font-link")
+                if not name_el:
+                    continue
+                name = name_el.get_text(strip=True)
+                if not name:
+                    continue
+                author_el = item.select_one(".designer a, .author a, span.designer")
+                author = author_el.get_text(strip=True) if author_el else "Unknown"
+                href = name_el.get("href", "")
+                slug = href.split("/")[-1].replace(".font", "") if href else name.lower().replace(" ", "-")
+
+                fonts.append({
+                    "name": name,
+                    "family": name,
+                    "use_case": json.dumps(["creative"]),
+                    "license": "Free",
+                    "designer": author,
+                    "file_url": f"https://www.1001fonts.com/{slug}.font",
+                    "description": f"{name} is a free font by {author} available on 1001Fonts.",
+                    "family_size": 1,
+                    "subsets": json.dumps(["latin"]),
+                })
+                page_count += 1
+                if len(fonts) >= limit:
+                    break
+
+            print(f"  Page {page}: +{page_count} fonts ({len(fonts)} total)")
+            if page_count < 10:
+                break
+            page += 1
+            time.sleep(0.4)
+
+        except Exception as e:
+            print(f"  Error on page {page}: {e}")
+            break
+
+    print(f"  1001Fonts total: {len(fonts)} fonts")
+    return fonts[:limit]
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Ingest open-source fonts into ukfont DB")
-    parser.add_argument("--source", choices=["fontshare", "openfontlibrary", "github", "fontsquirrel", "fontsource", "all"], help="Source to ingest from")
+    parser.add_argument("--source", choices=["fontshare", "openfontlibrary", "github", "fontsquirrel", "fontsource", "dafont", "fontspace", "1001fonts", "all"], help="Source to ingest from")
     parser.add_argument("--query", default="font", help="Search query (for GitHub source)")
     parser.add_argument("--limit", type=int, default=200, help="Max fonts to fetch")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be added, don't insert")
@@ -461,6 +702,9 @@ def main():
         print("  github         — Search GitHub topic:open-font-license by keyword")
         print("  fontsquirrel   — 13000+ curated free commercial fonts (needs browser User-Agent)")
         print("  all            — Run all sources")
+        print("  dafont         — 80,000+ free fonts from DaFont (HTML scraping)")
+        print("  fontspace      — 80,000+ free fonts from FontSpace (API)")
+        print("  1001fonts      — 15,000+ free fonts from 1001Fonts (HTML scraping)")
         return
 
     if not args.source:
@@ -483,6 +727,18 @@ def main():
         all_fonts += ingest_github_ofl(args.query, args.limit)
     if args.source in ("fontsquirrel", "all"):
         all_fonts += ingest_fontsquirrel(args.limit)
+    if args.source in ("dafont",):
+        if BeautifulSoup is None:
+            print("ERROR: beautifulsoup4 not installed. Run: pip install beautifulsoup4")
+            sys.exit(1)
+        all_fonts += ingest_dafont(args.limit)
+    if args.source in ("fontspace",):
+        all_fonts += ingest_fontspace(args.limit)
+    if args.source in ("1001fonts",):
+        if BeautifulSoup is None:
+            print("ERROR: beautifulsoup4 not installed. Run: pip install beautifulsoup4")
+            sys.exit(1)
+        all_fonts += ingest_1001fonts(args.limit)
 
     print(f"\nTotal fonts fetched: {len(all_fonts)}")
 
