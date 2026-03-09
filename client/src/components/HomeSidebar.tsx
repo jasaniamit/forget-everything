@@ -151,21 +151,23 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
     };
 
     return (
-        <aside className="w-full lg:w-72 shrink-0 space-y-10 lg:sticky top-8 lg:h-fit pb-10">
-            <div className="flex flex-col items-center lg:items-start px-4">
-                <img src={logoSvg} alt="ukfont" className="h-32 w-32 object-contain mb-4" />
+        <aside className="w-full lg:w-72 shrink-0 lg:sticky top-8 lg:h-fit pb-6 space-y-4">
+            <div className="flex flex-col items-center lg:items-start">
+                <Link href="/">
+                    <img src={logoSvg} alt="ukfont" className="w-full max-w-[200px] h-auto object-contain mb-1 cursor-pointer hover:opacity-80 transition-opacity" />
+                </Link>
             </div>
 
-            <nav className="flex flex-col sm:flex-row lg:flex-col flex-wrap gap-4 sm:gap-6 lg:gap-5 text-[15px] text-muted-foreground font-medium px-4 lg:px-0">
+            <nav className="flex flex-col sm:flex-row lg:flex-col flex-wrap gap-2 sm:gap-3 lg:gap-2 text-[14px] text-muted-foreground font-medium px-4 lg:px-0">
                 <Link href="/instagram-fonts"><span className="hover:text-primary transition-colors block cursor-pointer">Instagram Fonts</span></Link>
-                <Link href="/lenny-face"><span className="hover:text-primary transition-colors block cursor-pointer">Lenny Face Generator</span></Link>
+                <Link href="/lenny-face-generator"><span className="hover:text-primary transition-colors block cursor-pointer">Lenny Face Generator</span></Link>
                 <Link href="/upload"><span className="hover:text-primary transition-colors block cursor-pointer">Upload Font</span></Link>
-                <Link href="/"><span className={cn("hover:text-primary transition-colors block cursor-pointer", location === "/" && "font-bold text-foreground border-l-2 border-primary pl-4 -ml-4 bg-primary/5 py-1")}>Font Character</span></Link>
+                <Link href="/font-character"><span className={cn("hover:text-primary transition-colors block cursor-pointer", location === "/font-character" && "font-bold text-foreground border-l-2 border-primary pl-4 -ml-4 bg-primary/5 py-1")}>Font Character</span></Link>
                 <Link href="/emoji"><span className={cn("hover:text-primary transition-colors block cursor-pointer", location === "/emoji" && "font-bold text-foreground border-l-2 border-primary pl-4 -ml-4 bg-primary/5 py-1")}>Emojis</span></Link>
                 <Link href="/category"><span className={cn("hover:text-primary transition-colors block cursor-pointer", location === "/category" && "font-bold text-foreground border-l-2 border-primary pl-4 -ml-4 bg-primary/5 py-1")}>Font Category</span></Link>
             </nav>
 
-            <div className="pt-12 space-y-5">
+            <div className="pt-3 space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -202,10 +204,10 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                     </div>
                 )}
 
-                <div className="space-y-6 px-1">
+                <div className="space-y-4 px-1">
 
                     {/* ── Family Size Slider ── */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-[#7C8BFF]">
                             <span>Styles in family</span>
                             <span>
@@ -307,7 +309,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                     </FilterRow>
 
                     {/* ── Italics + Case ── */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                         <FilterRow label="Italics" hint="has variant">
                             <button onClick={() => toggle("italics","Yes")} title="Font family includes a true italic or oblique variant"
                                 className={cn("w-full h-10 border rounded-md flex items-center justify-center bg-white transition-all",
@@ -330,7 +332,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                     </div>
 
                     {/* ── Writing Language ── */}
-                    <div className="space-y-2 pt-1 border-t border-dashed">
+                    <div className="space-y-1.5 pt-1 border-t border-dashed">
                         <p className="text-[11px] font-black uppercase tracking-widest text-[#7C8BFF] pt-1">Writing Language</p>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -355,7 +357,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                     </div>
 
                     {/* ── Serif Type + a-Story ── */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                         <FilterRow label="Serif Type">
                             <div className="flex border rounded-md overflow-hidden bg-white">
                                 <FilterBtn active={filters.serifType === "Slab"} onClick={() => toggle("serifType","Slab")} tooltip="Slab serif — heavy rectangular serifs, low contrast (Rockwell, Zilla Slab, Arvo)">

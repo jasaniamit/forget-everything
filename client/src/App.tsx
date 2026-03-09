@@ -15,6 +15,7 @@ import Contact from "@/pages/Contact";
 import Upload from "@/pages/Upload";
 import Admin from "@/pages/Admin";
 import FontCharacter from "@/pages/FontCharacter";
+import FontSpecimen from "@/pages/FontSpecimen";
 import EmojiCreator from "@/pages/EmojiCreator";
 import FontPairing from "@/pages/FontPairing";
 import SpecimenBuilder from "@/pages/SpecimenBuilder";
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/instagram-fonts" component={IGGenerator} />
       <Route path="/category" component={Category} />
       <Route path="/font-character" component={FontCharacter} />
+      <Route path="/font-specimen" component={FontSpecimen} />
       <Route path="/emoji" component={Emoji} />
       <Route path="/emoji-creator" component={EmojiCreator} />
       <Route path="/lenny-face-generator" component={Lenny} />

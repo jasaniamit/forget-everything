@@ -88,6 +88,10 @@
   color: hsl(var(--primary-foreground));
 }
 
+/* Hide scrollbar but keep scroll functional */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

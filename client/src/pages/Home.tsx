@@ -8,7 +8,7 @@ import { getPreviewWeight } from "@/hooks/use-load-font";
 import { Navbar } from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Search, Loader2, LayoutGrid, Type as TypeIcon, ChevronDown, Copy, Check, RefreshCw } from "lucide-react";
+import { Search, Loader2, LayoutGrid, Type as TypeIcon, ChevronDown, Copy, Check, RefreshCw, Columns2, Pin, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -70,6 +70,53 @@ const PROPERTY_OPTIONS = {
   figures: ["Lining", "Oldstyle"]
 };
 
+// ── Compact grid tile for grid view ─────────────────────────────────────────
+function GridFontTile({ font, color }: {
+  font: any; color: string;
+}) {
+  if (typeof window !== "undefined") {
+    const id = `gf-grid-${font.id}`;
+    if (!document.getElementById(id)) {
+      const link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family)}:wght@400;700&display=swap`;
+      document.head.appendChild(link);
+    }
+  }
+
+  return (
+    <Link href={`/font/${font.id}`}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(124,139,255,0.12)" }}
+        className="group bg-white rounded-2xl border border-border/30 hover:border-primary/20 transition-all duration-300 p-4 flex flex-col justify-between overflow-hidden cursor-pointer h-[130px]"
+      >
+        {/* Large Aa — shows the font personality clearly */}
+        <div className="flex-1 flex items-center">
+          <span
+            className="leading-none select-none"
+            style={{
+              fontFamily: font.family,
+              fontSize: "52px",
+              color: color || "#66768D",
+              fontWeight: 400,
+            }}
+          >
+            Aa
+          </span>
+        </div>
+        {/* Name + category at bottom */}
+        <div className="shrink-0 border-t border-border/10 pt-2 mt-1">
+          <p className="text-[11px] font-bold text-foreground/60 truncate leading-tight">{font.name}</p>
+          <p className="text-[9px] uppercase tracking-widest text-primary/30 font-black mt-0.5">{font.category || "Font"}</p>
+        </div>
+      </motion.div>
+    </Link>
+  );
+}
+
 export default function Home() {
   const [location] = useLocation();
   const [search, setSearch] = useState("");
@@ -82,6 +129,9 @@ export default function Home() {
   const [page, setPage] = useState(1);
   // Rotation seed — changes every 30min automatically, or instantly on shuffle click
   const [seed, setSeed] = useState(() => Math.floor(Date.now() / (30 * 60 * 1000)));
+
+  const [viewMode, setViewMode] = useState<"list" | "grid" | "compare">("list");
+  const [compareIds, setCompareIds] = useState<Set<number>>(new Set());
 
   const [filters, setFilters] = useState<any>({
     weight: null,
@@ -139,6 +189,18 @@ export default function Home() {
       [key]: prev[key] === value ? null : value
     }));
   };
+
+  const toggleCompare = (font: any) => {
+    setCompareIds(prev => {
+      const n = new Set(prev);
+      if (n.has(font.id)) { n.delete(font.id); return n; }
+      if (n.size >= 4) return prev;
+      n.add(font.id);
+      return n;
+    });
+  };
+
+  const compareFonts = (fonts ?? []).filter((f: any) => compareIds.has(f.id));
 
   return (
     <div className="min-h-screen bg-background font-sans">
@@ -271,6 +333,61 @@ export default function Home() {
             {/* View Specific Content */}
             <section className="space-y-8">
 
+              {/* View mode switcher */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 bg-secondary/30 rounded-xl border border-border/40 p-1">
+                  {([
+                    { mode: "list",    label: "List" },
+                    { mode: "grid",    label: "Grid" },
+                    { mode: "compare", label: "Compare" },
+                  ] as { mode: "list"|"grid"|"compare"; label: string }[]).map(({ mode, label }) => (
+                    <button key={mode} onClick={() => setViewMode(mode)}
+                      className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                        viewMode === mode
+                          ? "bg-white shadow-sm text-primary"
+                          : "text-muted-foreground/60 hover:text-foreground"
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {viewMode === "compare" && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground/50">Click fonts to add · max 4 · {compareIds.size}/4</span>
+                    {compareIds.size > 0 && (
+                      <button onClick={() => setCompareIds(new Set())}
+                        className="text-xs text-primary/60 hover:text-primary font-bold transition-colors">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Compare panel */}
+              {viewMode === "compare" && compareFonts.length > 0 && (
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${compareFonts.length}, 1fr)` }}>
+                  {compareFonts.map((font: any) => (
+                    <div key={font.id} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm">
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-border/30 bg-secondary/20">
+                        <div>
+                          <p className="text-xs font-bold text-foreground truncate">{font.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{font.category}</p>
+                        </div>
+                        <button onClick={() => toggleCompare(font)} className="text-muted-foreground/40 hover:text-foreground transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="px-5 py-6 space-y-3">
+                        <p className="leading-snug text-foreground/80 break-words" style={{ fontFamily: font.family, fontSize: Math.min(fontSize, 40) }}>{previewText}</p>
+                        <p className="text-sm text-muted-foreground/60" style={{ fontFamily: font.family }}>The quick brown fox jumps over the lazy dog · 0123456789</p>
+                        <p className="text-xs text-muted-foreground/40 break-all" style={{ fontFamily: font.family }}>ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Results header — shows count + shuffle on default browse, just count on search/filter */}
               {(() => {
                 const hasFilters = search || activeStyles.length > 0 ||
@@ -316,6 +433,7 @@ export default function Home() {
                   <div className="text-center py-24 text-destructive bg-destructive/5 rounded-2xl border border-destructive/20">
                     <h3 className="text-xl font-bold">Transmission Error</h3>
                     <p className="mt-2 text-sm font-medium">Unable to synchronize font data.</p>
+                    <p className="mt-2 text-xs font-mono opacity-60">{String((error as any)?.message ?? error)}</p>
                   </div>
                 ) : fonts?.length === 0 ? (
                   <div className="text-center py-24 text-muted-foreground bg-secondary/20 rounded-2xl border-2 border-dashed border-border">
@@ -329,24 +447,56 @@ export default function Home() {
                       Reset All Filters
                     </Button>
                   </div>
-                ) : (
+                ) : viewMode === "grid" ? (
+                  /* ── Grid view: compact tiles ── */
                   <motion.div
-                    key="grid"
+                    key="gridview"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 mt-4"
+                  >
+                    {fonts?.map((font, idx) => (
+                      <GridFontTile
+                        key={font.id}
+                        font={font}
+                        color={fontColor}
+                      />
+                    ))}
+                  </motion.div>
+                ) : (
+                  /* ── List / Compare view ── */
+                  <motion.div
+                    key="listview"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="flex flex-col space-y-2 mt-4"
                   >
                     {fonts?.map((font, idx) => (
-                      <FontCard
-                        key={font.id}
-                        font={font}
-                        previewText={previewText}
-                        fontSize={fontSize}
-                        color={fontColor}
-                        index={idx}
-                        previewWeight={getPreviewWeight(filters.weight)}
-                      />
+                      viewMode === "compare" ? (
+                        <div key={font.id}
+                          onClick={() => toggleCompare(font)}
+                          className={`cursor-pointer rounded-2xl border-2 transition-all ${compareIds.has(font.id) ? "border-primary shadow-lg shadow-primary/10 scale-[1.01]" : "border-transparent hover:border-primary/30"}`}>
+                          <FontCard
+                            font={font}
+                            previewText={previewText}
+                            fontSize={fontSize}
+                            color={fontColor}
+                            index={idx}
+                            previewWeight={getPreviewWeight(filters.weight)}
+                          />
+                        </div>
+                      ) : (
+                        <FontCard
+                          key={font.id}
+                          font={font}
+                          previewText={previewText}
+                          fontSize={fontSize}
+                          color={fontColor}
+                          index={idx}
+                          previewWeight={getPreviewWeight(filters.weight)}
+                        />
+                      )
                     ))}
                   </motion.div>
                 )}
@@ -381,8 +531,15 @@ export default function Home() {
             </section>
           </div >
 
-          <aside className="hidden xl:block w-72 shrink-0 space-y-10 sticky top-24">
-            <div className="space-y-6">
+          <aside className="hidden xl:block w-72 shrink-0 sticky top-24 space-y-6">
+            {/* ── Google AdSense placeholder ── */}
+            <div className="w-full rounded-2xl border-2 border-dashed border-border/30 bg-secondary/10 flex flex-col items-center justify-center text-center p-4" style={{ minHeight: 280 }}>
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/25">Advertisement</p>
+              {/* Replace this div with your AdSense <ins> tag */}
+            </div>
+
+            {/* Related Styles */}
+            <div className="space-y-4">
               <h4 className="text-[13px] font-black uppercase tracking-[0.2em] text-primary/40">RELATED STYLES</h4>
               <div className="grid grid-cols-2 gap-2">
                 {["Cartoon", "Comic", "Groovy", "Trash", "Graffiti", "Old School", "Horror", "School", "Outline", "Curly", "Various", "Brush"].map(style => (
@@ -391,6 +548,11 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* ── Second AdSense slot ── */}
+            <div className="w-full rounded-2xl border-2 border-dashed border-border/30 bg-secondary/10 flex flex-col items-center justify-center text-center p-4" style={{ minHeight: 250 }}>
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/25">Advertisement</p>
             </div>
           </aside>
         </div >

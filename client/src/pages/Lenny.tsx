@@ -503,8 +503,7 @@ export default function LennyPage() {
       <div className="max-w-[1200px] mx-auto px-4 py-8 space-y-10">
 
         {/* ── Header ── */}
-        <div className="text-center space-y-3">
-          <div className="text-5xl font-mono text-zinc-700 select-all">( ͡° ͜ʖ ͡°)</div>
+        <div className="text-center space-y-2">
           <h1 className="text-5xl font-black tracking-tighter">
             Lenny Face <span className="text-primary">Generator</span>
           </h1>
@@ -517,9 +516,14 @@ export default function LennyPage() {
         <div className="bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden">
 
           {/* Preview bar */}
-          <div className="border-b border-zinc-100 px-8 py-10 flex flex-col items-center gap-5 bg-zinc-50/60">
+          <div className="border-b border-zinc-100 px-8 py-12 flex flex-col items-center gap-6 bg-zinc-50/60">
 
-            {/* Part blocks — FontSpace style: each part in its own box */}
+            {/* Big assembled face — primary focus */}
+            <div className="text-6xl font-mono text-zinc-800 select-all text-center leading-relaxed tracking-wide px-10 py-8 rounded-3xl bg-white border border-zinc-100 shadow-md min-w-[360px]">
+              {face}
+            </div>
+
+            {/* Part boxes — BELOW the face */}
             <div className="flex items-end justify-center gap-2 flex-wrap">
               {/* Left arm */}
               <div className="flex flex-col items-center gap-1.5">
@@ -561,11 +565,6 @@ export default function LennyPage() {
                 <div className="w-14 h-14 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-2xl font-mono text-zinc-800 shadow-sm">{arm.r}</div>
                 <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300">Arm</span>
               </div>
-            </div>
-
-            {/* Assembled face string — readable size */}
-            <div className="text-4xl font-mono text-zinc-800 select-all text-center leading-relaxed tracking-wide px-4 py-3 rounded-2xl bg-white border border-zinc-100 shadow-sm min-w-[280px]">
-              {face}
             </div>
 
             <div className="flex gap-3">

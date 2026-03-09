@@ -19,6 +19,7 @@ export function Navbar() {
           <Link href="/lenny-face-generator" className={cn("hover:text-primary transition-colors", location !== "/lenny-face-generator" && "text-white/70")}>Lenny Face</Link>
           <Link href="/emoji" className={cn("hover:text-primary transition-colors", location !== "/emoji" && "text-white/70")}>Emoji</Link>
           <Link href="/emoji-creator" className={cn("hover:text-primary transition-colors", location !== "/emoji-creator" && "text-white/70")}>Emoji Creator</Link>
+          <Link href="/font-specimen" className={cn("hover:text-primary transition-colors", location !== "/font-specimen" && "text-white/70")}>Font Specimen</Link>
           <Link href="/font-character" className={cn("hover:text-primary transition-colors", location !== "/font-character" && "text-white/70")}>Font Character</Link>
           <Link href="/contact" className={cn("hover:text-primary transition-colors", location !== "/contact" && "text-white/70")}>Contact Us</Link>
         </nav>
