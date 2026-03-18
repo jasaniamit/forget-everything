@@ -1,4 +1,3 @@
-import logoSvg from "@assets/logo_1768878013498.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -123,7 +122,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeUseCase, setActiveUseCase] = useState("All");
   const [previewText, setPreviewText] = useState("The quick brown fox jumps over the lazy dog");
-  const [fontSize, setFontSize] = useState(40);
+  const [fontSize, setFontSize] = useState(32);
   const [fontColor, setFontColor] = useState("#66768D");
   const [isCommercial, setIsCommercial] = useState(false);
   const [page, setPage] = useState(1);
@@ -150,7 +149,14 @@ export default function Home() {
   });
 
   const { data: taxonomy } = useQuery<any>({ queryKey: ["/api/taxonomy"] });
-  const [activeStyles, setActiveStyles] = useState<string[]>([]);
+  const [activeStyles, setActiveStyles] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get("category");
+      if (cat) return [cat.toLowerCase().replace(" ", "-")];
+    }
+    return [];
+  });
 
   const { data, isLoading, error } = useFonts({
     search: search || undefined,
@@ -170,6 +176,7 @@ export default function Home() {
     minFamilySize: filters.familySize[0] === 1 && filters.familySize[1] === 25 ? undefined : filters.familySize[0],
     maxFamilySize: filters.familySize[0] === 1 && filters.familySize[1] === 25 ? undefined : filters.familySize[1],
     subset: filters.subset || undefined,
+    licenseType: filters.licenseType || undefined,
     page,
     seed,
   });
@@ -179,7 +186,7 @@ export default function Home() {
 
   const toggleStyle = (slug: string) => {
     setPage(1);
-    setActiveStyles(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+    setActiveStyles(prev => (prev.includes(slug) && prev.length === 1) ? [] : [slug]);
   };
 
   const toggleFilter = (key: string, value: string) => {
@@ -211,7 +218,7 @@ export default function Home() {
           {/* Left Sidebar Menu */}
           <HomeSidebar
             location={location}
-            logoSvg={logoSvg}
+            logoSvg={"/logo.svg"}
             filters={filters}
             setFilters={setFilters}
             setPage={setPage}
@@ -222,108 +229,117 @@ export default function Home() {
           <div className="flex-1 space-y-10 w-full overflow-hidden">
             <div className="flex flex-col gap-10 items-start relative">
               {/* Search Bar & Primary Interaction Area */}
-              <div className="w-full space-y-10">
-                <section className="relative w-full">
-                  <div className="relative group max-w-3xl mx-auto">
+              <div className="w-full flex-col">
+                <section className="relative w-full flex flex-col items-center justify-center pt-2">
+                  <div className="relative z-10 w-full max-w-[800px] mb-4 mt-2">
                     <Input
                       placeholder="Search Font..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="h-14 sm:h-16 pl-6 sm:pl-8 pr-12 sm:pr-16 text-lg sm:text-xl bg-white border-primary/10 shadow-xl rounded-2xl focus-visible:ring-1 focus-visible:ring-primary/20"
+                      className="h-16 pl-8 pr-16 text-lg bg-white border border-slate-100 shadow-[0_8px_30px_rgb(133,152,238,0.12)] rounded-[2rem] focus-visible:ring-1 focus-visible:ring-white/20 transition-all font-medium text-slate-700 placeholder:text-slate-400"
                     />
-                    <Search className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Search className="absolute right-6 top-1/2 -translate-y-1/2 h-6 w-6 text-[#8598EE]" />
+                  </div>
+                  <div className="w-full max-w-[1000px] relative pointer-events-none flex justify-center mt-2">
+                     <img src="/search-bar.svg" alt="Search Illustration" className="w-[95%] sm:w-[85%] h-auto object-contain" />
                   </div>
                 </section>
 
-                <section className="space-y-12">
-                  {taxonomy?.categories.filter((cat: any) => cat.slug === 'basic').map((cat: any) => (
-                    <div key={cat.id} className="space-y-4">
-                      <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-primary/40 border-b border-primary/5 pb-2">{cat.name}</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {taxonomy.styles.filter((s: any) => s.categoryId === cat.id).map((style: any) => (
-                          <Button
-                            key={style.id}
-                            variant={activeStyles.includes(style.slug) ? "default" : "outline"}
-                            onClick={() => toggleStyle(style.slug)}
-                            className={cn(
-                              "rounded-lg px-4 h-8 text-[11px] font-bold uppercase tracking-wider transition-all",
-                              activeStyles.includes(style.slug)
-                                ? "bg-primary text-white border-primary shadow-lg scale-105"
-                                : "border-primary/10 text-muted-foreground hover:bg-primary/5"
-                            )}
-                          >
-                            {style.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <section className="mt-8 mb-6">
+                  <div className="w-full text-center mb-4">
+                    <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#A0AABF]">BROWSE BY CATEGORIES</h3>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 w-full max-w-7xl mx-auto px-1 mb-2">
+                    {[
+                      { slug: "sans-serif", label: "Sans Serif" },
+                      { slug: "slab-serif", label: "Slab Serif" },
+                      { slug: "serif", label: "Serif" },
+                      { slug: "display", label: "Display" },
+                      { slug: "handwriting", label: "Handwritten" },
+                      { slug: "script", label: "Script" },
+                      { slug: "decorative", label: "Decorative" },
+                      { slug: "monospace", label: "Monospace" }
+                    ].map((cat) => (
+                      <button
+                        key={cat.slug}
+                        onClick={() => toggleStyle(cat.slug)}
+                        className={cn(
+                          "rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-[12px] font-bold transition-all shadow-sm whitespace-nowrap",
+                          activeStyles.includes(cat.slug)
+                            ? "bg-[#8598EE] text-white shadow-[#8598EE]/20"
+                            : "bg-[#F3F6FF] text-[#8598EE] hover:bg-[#EAEFFF]"
+                        )}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
 
                   {/* Font Preview Customizer Bar */}
-                  <div className="flex items-center mx-auto w-full max-w-4xl bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 p-2 h-16 shrink-0 mt-8 mb-4">
-                    <div className="flex-1 px-4 flex items-center h-full">
+                  <div className="mx-auto w-full max-w-[1000px] mt-12 mb-4 px-4 py-3 sm:px-5 sm:py-3.5 rounded-[1.25rem] border border-[#E5E9F2] shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white flex flex-col xl:flex-row items-center gap-4 xl:gap-6">
+                    <div className="flex-1 flex relative w-full">
                       <Input
                         value={previewText}
                         onChange={(e) => setPreviewText(e.target.value)}
                         placeholder="Type or choose sample text..."
-                        className="border-0 shadow-none focus-visible:ring-0 text-base font-medium h-full p-0 bg-transparent w-full"
+                        className="border-0 shadow-none focus-visible:ring-0 text-[15px] font-medium h-12 px-5 bg-[#F1F4F9] rounded-xl w-full"
                       />
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <div className="h-12 w-12 bg-primary/5 hover:bg-primary/10 rounded-xl flex items-center justify-center text-primary/60 cursor-pointer transition-colors mr-6 shrink-0">
-                          <ChevronDown size={18} />
+                    <div className="flex items-center justify-between xl:justify-start gap-4 sm:gap-5 shrink-0 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="h-10 w-10 shrink-0 bg-[#8598EE] hover:bg-[#7285DB] text-white rounded-[0.7rem] flex items-center justify-center transition-all shadow-md shadow-[#8598EE]/20 cursor-pointer">
+                            <ChevronDown size={18} strokeWidth={2.5} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-[350px] sm:w-[450px] max-h-[400px] overflow-y-auto rounded-[1.25rem] shadow-[0_20px_50px_-10px_rgb(0,0,0,0.15)] border border-slate-100 p-2 z-50 bg-white">
+                          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider px-3 pb-2 pt-1 border-b border-slate-50 mb-1">Select Phrase</div>
+                          {SAMPLE_TEXTS.map((text, i) => (
+                            <DropdownMenuItem
+                              key={i}
+                              className="text-[14px] text-slate-600 py-3.5 px-4 cursor-pointer rounded-[0.85rem] font-medium hover:bg-[#F3F6FF] hover:text-[#8598EE] transition-colors focus:bg-[#F3F6FF] focus:text-[#8598EE] data-[highlighted]:bg-[#F3F6FF] data-[highlighted]:text-[#8598EE]"
+                              onClick={() => setPreviewText(text)}
+                            >
+                              {text}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <div className="flex items-center gap-3 w-32 sm:w-40 shrink-0">
+                        <Slider
+                          value={[fontSize]}
+                          onValueChange={(v: number[]) => setFontSize(v[0])}
+                          min={12}
+                          max={120}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="relative shrink-0 flex items-center justify-center">
+                        <div
+                          className="w-9 h-9 rounded-[0.6rem] shrink-0 cursor-pointer shadow-sm border border-slate-200 transition-transform hover:scale-110"
+                          style={{ backgroundColor: fontColor }}
+                          onClick={() => document.getElementById('font-color-picker')?.click()}
+                        />
+                        <input id="font-color-picker" type="color" value={fontColor} onChange={(e) => setFontColor(e.target.value)} className="sr-only" />
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 cursor-pointer group" onClick={() => toggleFilter("licenseType", filters.licenseType === "free" ? "All" : "free")}>
+                        <div className={cn("w-[18px] h-[18px] rounded-[4px] border border-slate-300 flex items-center justify-center transition-colors group-hover:border-[#8598EE]", filters.licenseType === "free" ? "bg-[#8598EE] border-[#8598EE]" : "")}>
+                          {filters.licenseType === "free" && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
                         </div>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[400px] max-h-[500px] overflow-y-auto rounded-xl shadow-2xl p-2 z-50">
-                        {SAMPLE_TEXTS.map((text, i) => (
-                          <DropdownMenuItem
-                            key={i}
-                            className="text-[14px] py-3 px-4 cursor-pointer rounded-lg font-medium border-b border-border/5 last:border-0 hover:bg-primary/5"
-                            onClick={() => setPreviewText(text)}
-                          >
-                            {text}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        <span className="text-[12px] font-bold text-[#66768D] group-hover:text-slate-700 transition-colors whitespace-nowrap">Commercial Use</span>
+                      </div>
 
-                    <div className="flex items-center gap-4 mr-6 w-32 shrink-0">
-                      <Slider
-                        value={[fontSize]}
-                        onValueChange={(v) => setFontSize(v[0])}
-                        min={12}
-                        max={120}
-                        step={1}
-                        className="w-full relative z-10"
-                      />
-                      <span className="text-[14px] font-bold text-primary/40 w-6 text-right">{fontSize}</span>
-                    </div>
-
-                    <div
-                      className="w-10 h-10 rounded-xl shadow-inner cursor-pointer mr-4 shrink-0 transition-transform hover:scale-105"
-                      style={{ backgroundColor: fontColor }}
-                      onClick={() => document.getElementById('font-color-picker')?.click()}
-                    >
-                      <input
-                        id="font-color-picker"
-                        type="color"
-                        value={fontColor}
-                        onChange={(e) => setFontColor(e.target.value)}
-                        className="sr-only"
-                      />
-                    </div>
-
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary/5 cursor-pointer transition-colors shrink-0 group mr-2"
-                      onClick={() => {
-                        setFontColor("#66768D");
-                        setPreviewText("The quick brown fox jumps over the lazy dog");
-                        setFontSize(40);
-                      }}
-                    >
-                      <RefreshCw className="text-primary/40 group-hover:text-primary transition-colors" size={18} />
+                      <button
+                        className="w-10 h-10 flex items-center justify-center shrink-0 text-slate-300 hover:text-slate-500 hover:bg-slate-50 transition-all rounded-[0.7rem]"
+                        onClick={() => { setFontColor("#66768D"); setPreviewText("The quick brown fox jumps over the lazy dog"); setFontSize(32); setFilters((prev: any) => ({ ...prev, licenseType: null })); }}
+                      >
+                        <RefreshCw size={18} strokeWidth={2} />
+                      </button>
                     </div>
                   </div>
                 </section>
@@ -392,7 +408,7 @@ export default function Home() {
               {(() => {
                 const hasFilters = search || activeStyles.length > 0 ||
                   Object.entries(filters).some(([k, v]) =>
-                    k !== "familySize" ? !!v : (v[0] !== 1 || v[1] !== 25)
+                    k !== "familySize" ? !!v : ((v as number[])[0] !== 1 || (v as number[])[1] !== 25)
                   );
                 return (
                   <div className="flex items-center justify-between px-1">

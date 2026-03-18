@@ -6,7 +6,7 @@ export function Navbar() {
   const [location] = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-[#00153D] text-white overflow-x-auto no-scrollbar">
+    <header className="sticky top-0 z-50 w-full border-b bg-[#253858] text-white overflow-x-auto no-scrollbar">
       <div className="container mx-auto px-4 h-[2.3rem] flex items-center justify-center min-w-max">
         <nav className="flex items-center gap-8 text-[13px] font-medium">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>

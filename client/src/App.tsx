@@ -21,6 +21,7 @@ import FontPairing from "@/pages/FontPairing";
 import SpecimenBuilder from "@/pages/SpecimenBuilder";
 import BrandFonts from "@/pages/BrandFonts";
 import BrandDetail from "@/pages/BrandDetail";
+import { Footer } from "@/components/Footer";
 
 function Router() {
   return (
@@ -52,7 +53,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-1 w-full">
+            <Router />
+          </div>
+          <Footer />
+        </div>
       </TooltipProvider>
     </QueryClientProvider>
   );

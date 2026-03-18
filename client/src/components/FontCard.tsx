@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Font } from "@shared/schema";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLoadFont } from "@/hooks/use-load-font";
 
@@ -75,6 +75,14 @@ function getLetterSpacing(font: Font): string {
   return "normal";
 }
 
+// ── License label helper ─────────────────────────────────────────────────────
+function getLicenseLabel(font: Font): { text: string; isPersonal: boolean } {
+  const lt = (font as any).licenseType ?? "free";
+  if (lt === "personal") return { text: "PERSONAL USE", isPersonal: true };
+  if (lt === "open-source") return { text: "OPEN SOURCE", isPersonal: false };
+  return { text: "100% FREE", isPersonal: false };
+}
+
 export function FontCard({
   font, previewText, fontSize, color, index = 0, previewWeight,
 }: FontCardProps) {
@@ -83,6 +91,9 @@ export function FontCard({
   const showcaseWeight  = getShowcaseWeight(font, previewWeight);
   const showcaseSize    = getShowcaseFontSize(font, fontSize);
   const letterSpacing   = getLetterSpacing(font);
+  const { text: licenseText, isPersonal } = getLicenseLabel(font);
+
+  const commercialUrl = (font as any).commercialUrl || font.fileUrl;
 
   const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -151,19 +162,39 @@ export function FontCard({
           </div>
         </Link>
 
-        {/* Download */}
-        <button
-          onClick={handleDownload}
-          className="flex flex-col items-center gap-2 shrink-0 group/btn z-10"
-        >
-          <div className="bg-secondary/50 p-3 rounded-full group-hover/btn:bg-primary group-hover/btn:shadow-lg group-hover/btn:shadow-primary/25 group-hover/btn:scale-110 transition-all duration-300">
-            <ArrowDown className="h-6 w-6 text-muted-foreground group-hover/btn:text-white transition-colors" />
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 group-hover/btn:text-primary/60 transition-colors">
-            {(font.downloadCount ?? 0) > 1000 ? "100% FREE" : "PERSONAL USE"}
-          </span>
-        </button>
+        {/* Download + License */}
+        <div className="flex flex-col items-center gap-1.5 shrink-0 z-10">
+          <button
+            onClick={handleDownload}
+            className="flex flex-col items-center gap-2 group/btn"
+          >
+            <div className="bg-secondary/50 p-3 rounded-full group-hover/btn:bg-primary group-hover/btn:shadow-lg group-hover/btn:shadow-primary/25 group-hover/btn:scale-110 transition-all duration-300">
+              <ArrowDown className="h-6 w-6 text-muted-foreground group-hover/btn:text-white transition-colors" />
+            </div>
+            <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${
+              isPersonal
+                ? "text-amber-500/70 group-hover/btn:text-amber-600"
+                : "text-muted-foreground/40 group-hover/btn:text-primary/60"
+            }`}>
+              {licenseText}
+            </span>
+          </button>
+          {/* Buy Commercial License link for personal-use-only fonts */}
+          {isPersonal && (
+            <a
+              href={commercialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-[8px] font-bold text-amber-600/60 hover:text-amber-700 transition-colors px-2 py-0.5 rounded hover:bg-amber-50"
+            >
+              Buy Commercial License
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          )}
+        </div>
       </div>
     </motion.div>
   );
 }
+
