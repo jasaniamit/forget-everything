@@ -27,6 +27,7 @@ const CHIP_LABELS: Record<string, Record<string, string>> = {
     serifType: { Slab: "Slab serif", Transitional: "Transitional", Modern: "Modern", Humanist: "Humanist" },
     aStory: { Double: "Double-story a", Single: "Single-story a" },
     gStory: { Double: "Double-story g", Single: "Single-story g" },
+    licenseType: { free: "Free / Commercial", personal: "Personal use only" },
 };
 
 // ── Small SVG contrast icons showing actual stroke difference ──
@@ -69,12 +70,12 @@ function FilterBtn({ active, onClick, tooltip, children }: {
     return (
         <button onClick={onClick} title={tooltip}
             className={cn(
-                "flex-1 h-10 flex items-center justify-center border-r last:border-0 transition-all duration-150",
-                "hover:bg-[#7C8BFF]/5",
+                "flex-1 h-10 flex items-center justify-center border-r-[1.5px] last:border-0 border-[#EBF5FF] transition-all duration-150",
+                "hover:bg-[#8598EE]/5",
                 active
-                    ? "bg-[#7C8BFF]/12 text-[#7C8BFF] ring-1 ring-inset ring-[#7C8BFF]/25 font-black"
-                    : "text-muted-foreground/55"
-            )}>
+                    ? "bg-[#8598EE]/12 text-[#8598EE] ring-1 ring-inset ring-[#8598EE]/25 font-black"
+                    : "text-[#9EADC7]"
+            )} style={{ color: active ? undefined : '#9EADC7', borderColor: '#EBF5FF' }}>
             {children}
         </button>
     );
@@ -84,9 +85,9 @@ function FilterRow({ label, hint, children }: { label: string; hint?: string; ch
     return (
         <div className="space-y-1.5">
             {children}
-            <p className="text-[9px] text-center uppercase font-black text-muted-foreground/30 tracking-[0.2em]">
+            <p className="text-[9px] text-center uppercase font-black tracking-[0.2em]" style={{ color: '#8598EE' }}>
                 {label}
-                {hint && <span className="normal-case font-normal opacity-60 ml-1">— {hint}</span>}
+                {hint && <span className="normal-case font-normal opacity-60 ml-1" style={{ color: '#8598EE' }}>— {hint}</span>}
             </p>
         </div>
     );
@@ -122,6 +123,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
             weight: null, width: null, xHeight: null, contrast: null,
             italics: null, caps: null, story: null, figures: null,
             serifType: null, aStory: null, gStory: null, subset: null,
+            licenseType: null,
             familySize: [1, 25],
         });
         setPage(1);
@@ -131,7 +133,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
     const chips: { key: string; value: string; label: string }[] = [];
     const buckets = weightBuckets();
     buckets.forEach(b => chips.push({ key: "weight", value: b, label: CHIP_LABELS.weight[b] ?? b }));
-    for (const key of ["width","xHeight","contrast","italics","caps","serifType","aStory","gStory","subset"]) {
+    for (const key of ["width","xHeight","contrast","italics","caps","serifType","aStory","gStory","subset","licenseType"]) {
         if (filters[key]) chips.push({ key, value: filters[key], label: CHIP_LABELS[key]?.[filters[key]] ?? filters[key] });
     }
     if (filters.familySize[0] !== 1 || filters.familySize[1] !== 25) {
@@ -151,7 +153,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
     };
 
     return (
-        <aside className="w-full lg:w-72 shrink-0 lg:sticky top-8 lg:h-fit pb-6 space-y-4">
+        <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-10 space-y-4 z-20 pr-1">
             <div className="flex flex-col items-center lg:items-start">
                 <Link href="/">
                     <img src={logoSvg} alt="ukfont" className="w-full max-w-[200px] h-auto object-contain mb-1 cursor-pointer hover:opacity-80 transition-opacity" />
@@ -171,7 +173,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <h4 className="text-[14px] font-black uppercase tracking-widest text-primary">PROPERTIES</h4>
+                        <h4 className="text-[14px] font-black uppercase tracking-widest text-[#8598EE]" style={{ color: '#8598EE' }}>PROPERTIES</h4>
                         {totalFonts !== undefined && (
                             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full transition-all",
                                 chips.length > 0 ? "bg-primary text-white" : "bg-primary/10 text-primary"
@@ -181,7 +183,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                         )}
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetAll} title="Reset all filters">
-                        <RefreshCw className="h-3 w-3" />
+                        <RefreshCw className="h-3 w-3" style={{ color: '#9EADC7' }} />
                     </Button>
                 </div>
 
@@ -205,67 +207,33 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                 )}
 
                 <div className="space-y-4 px-1">
-
-                    {/* ── Family Size Slider ── */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-[#7C8BFF]">
-                            <span>Styles in family</span>
-                            <span>
-                                {filters.familySize[0] === 1 && filters.familySize[1] === 25
-                                    ? "Any"
-                                    : `${filters.familySize[0]} – ${filters.familySize[1]}${filters.familySize[1] === 25 ? "+" : ""}`}
-                            </span>
-                        </div>
-                        <div className="px-2">
-                            {/* FIX: value is [min,max], min left, max right — Slider goes left to right */}
-                            <Slider
-                                value={[filters.familySize[0], filters.familySize[1]]}
-                                onValueChange={(v) => {
-                                    // v[0] = left handle = min, v[1] = right handle = max
-                                    setFilters((f: any) => ({ ...f, familySize: [v[0], v[1]] }));
-                                }}
-                                min={1}
-                                max={25}
-                                step={1}
-                            />
-                        </div>
-                        <div className="flex justify-between text-[9px] text-muted-foreground/30 font-medium px-1">
-                            <span>1</span>
-                            <span className="text-center opacity-60">← drag to filter →</span>
-                            <span>25+</span>
-                        </div>
-                    </div>
-
-                    {/* ── Weight ──
-                        Multi-select: Light (100-300) | Regular (400-500) | Bold (600-900)
-                        Multiple buckets can be active simultaneously.
-                        A font appears if it has variants in ANY of the selected buckets. */}
+                    {/* ── Weight ── */}
                     <FilterRow label="Weight" hint="100–900, tap multiple">
-                        <div className="flex border rounded-md overflow-hidden bg-white">
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                             <FilterBtn
                                 active={weightBuckets().includes("Light")}
                                 onClick={() => toggleWeight("Light")}
                                 tooltip="Light — 100 Thin · 200 Extra Light · 300 Light">
-                                <span className="text-xl font-light text-slate-400">G</span>
+                                <span className="text-xl font-light text-[#9EADC7]">G</span>
                             </FilterBtn>
                             <FilterBtn
                                 active={weightBuckets().includes("Regular")}
                                 onClick={() => toggleWeight("Regular")}
                                 tooltip="Regular — 400 Regular · 500 Medium">
-                                <span className="text-xl font-normal">G</span>
+                                <span className="text-xl font-normal text-[#9EADC7]">G</span>
                             </FilterBtn>
                             <FilterBtn
                                 active={weightBuckets().includes("Bold")}
                                 onClick={() => toggleWeight("Bold")}
                                 tooltip="Bold — 600 Semibold · 700 Bold · 800 Extra Bold · 900 Black">
-                                <span className="text-xl font-black">G</span>
+                                <span className="text-xl font-black text-[#9EADC7]">G</span>
                             </FilterBtn>
                         </div>
                     </FilterRow>
 
                     {/* ── Width ── */}
                     <FilterRow label="Width" hint="horizontal stretch">
-                        <div className="flex border rounded-md overflow-hidden bg-white">
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                             <FilterBtn active={filters.width === "Condensed"} onClick={() => toggle("width","Condensed")} tooltip="Condensed — narrow letters, tall oval O">
                                 <span className="text-xl inline-block" style={{ transform:"scaleX(0.55)", transformOrigin:"center" }}>A</span>
                             </FilterBtn>
@@ -280,7 +248,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
 
                     {/* ── x-Height ── */}
                     <FilterRow label="x-Height" hint="lowercase ÷ uppercase height">
-                        <div className="flex border rounded-md overflow-hidden bg-white">
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                             <FilterBtn active={filters.xHeight === "Low"} onClick={() => toggle("xHeight","Low")} tooltip="Low x-height (<50%) — elegant, delicate, editorial">
                                 <XHeightIcon level="Low" />
                             </FilterBtn>
@@ -295,7 +263,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
 
                     {/* ── Contrast ── */}
                     <FilterRow label="Contrast" hint="thick ÷ thin stroke ratio">
-                        <div className="flex border rounded-md overflow-hidden bg-white">
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                             <FilterBtn active={filters.contrast === "Low"} onClick={() => toggle("contrast","Low")} tooltip="Low contrast — monolinear strokes (sans-serif, geometric)">
                                 <ContrastIcon level="Low" />
                             </FilterBtn>
@@ -312,15 +280,15 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                     <div className="grid grid-cols-2 gap-2">
                         <FilterRow label="Italics" hint="has variant">
                             <button onClick={() => toggle("italics","Yes")} title="Font family includes a true italic or oblique variant"
-                                className={cn("w-full h-10 border rounded-md flex items-center justify-center bg-white transition-all",
+                                className={cn("w-full h-10 border-[1.5px] border-[#EBF5FF] rounded-md flex items-center justify-center bg-white transition-all",
                                     filters.italics === "Yes"
-                                        ? "bg-[#7C8BFF]/12 text-[#7C8BFF] ring-1 ring-inset ring-[#7C8BFF]/25"
-                                        : "text-muted-foreground/55 hover:bg-[#7C8BFF]/5")}>
+                                        ? "bg-[#8598EE]/12 text-[#8598EE] ring-1 ring-inset ring-[#8598EE]/25"
+                                        : "text-[#9EADC7] hover:bg-[#8598EE]/5")}>
                                 <span className="italic text-lg font-medium">i</span>
                             </button>
                         </FilterRow>
                         <FilterRow label="Case">
-                            <div className="flex border rounded-md overflow-hidden bg-white">
+                            <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                                 <FilterBtn active={filters.caps === "Standard"} onClick={() => toggle("caps","Standard")} tooltip="Standard — font has both uppercase and lowercase">
                                     <span className="text-[13px] font-bold">Ab</span>
                                 </FilterBtn>
@@ -331,35 +299,10 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                         </FilterRow>
                     </div>
 
-                    {/* ── Writing Language ── */}
-                    <div className="space-y-1.5 pt-1 border-t border-dashed">
-                        <p className="text-[11px] font-black uppercase tracking-widest text-[#7C8BFF] pt-1">Writing Language</p>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="w-full justify-between h-10 bg-white font-medium text-xs">
-                                    {filters.subset
-                                        ? filters.subset.charAt(0).toUpperCase() + filters.subset.slice(1).replace("-", " ")
-                                        : "All Languages"}
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-64 max-h-[300px] overflow-auto">
-                                <DropdownMenuItem onClick={() => toggle("subset", null)}>All Languages</DropdownMenuItem>
-                                {["latin","latin-ext","cyrillic","cyrillic-ext","greek","greek-ext",
-                                  "vietnamese","devanagari","arabic","hebrew","thai","khmer",
-                                  "korean","japanese","bengali","gujarati","tamil","telugu"].map(s => (
-                                    <DropdownMenuItem key={s} onClick={() => toggle("subset", s)}>
-                                        {s.charAt(0).toUpperCase() + s.slice(1).replace("-", " ")}
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-
                     {/* ── Serif Type + a-Story ── */}
                     <div className="grid grid-cols-2 gap-2">
                         <FilterRow label="Serif Type">
-                            <div className="flex border rounded-md overflow-hidden bg-white">
+                            <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                                 <FilterBtn active={filters.serifType === "Slab"} onClick={() => toggle("serifType","Slab")} tooltip="Slab serif — heavy rectangular serifs, low contrast (Rockwell, Zilla Slab, Arvo)">
                                     <span className="text-[11px] font-black">S</span>
                                 </FilterBtn>
@@ -372,7 +315,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                             </div>
                         </FilterRow>
                         <FilterRow label="a-Story">
-                            <div className="flex border rounded-md overflow-hidden bg-white">
+                            <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                                 <FilterBtn active={filters.aStory === "Double"} onClick={() => toggle("aStory","Double")} tooltip="Double-story a — traditional, humanist, calligraphic">
                                     <span className="text-[18px] leading-none" style={{ fontFamily: "serif" }}>a</span>
                                 </FilterBtn>
@@ -385,7 +328,7 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
 
                     {/* ── g-Story ── */}
                     <FilterRow label="g-Story">
-                        <div className="flex border rounded-md overflow-hidden bg-white">
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
                             <FilterBtn active={filters.gStory === "Double"} onClick={() => toggle("gStory","Double")} tooltip="Double-story g (looptail) — traditional roman typefaces">
                                 <span className="text-[18px] leading-none" style={{ fontFamily: "serif" }}>g</span>
                             </FilterBtn>
@@ -394,6 +337,56 @@ export function HomeSidebar({ location, logoSvg, filters, setFilters, setPage, t
                             </FilterBtn>
                         </div>
                     </FilterRow>
+
+                    {/* ── License Type ── */}
+                    <div className="space-y-1.5 pt-3 border-t-[1.5px] border-[#EBF5FF] border-dashed mt-3">
+                        <p className="text-[11px] font-black uppercase tracking-widest pt-1" style={{ color: '#9EADC7' }}>License</p>
+                        <div className="flex border-[1.5px] border-[#EBF5FF] rounded-md overflow-hidden bg-white">
+                            <FilterBtn
+                                active={!filters.licenseType}
+                                onClick={() => toggle("licenseType", null)}
+                                tooltip="Show all fonts regardless of license">
+                                <span className="text-[11px] font-bold">All</span>
+                            </FilterBtn>
+                            <FilterBtn
+                                active={filters.licenseType === "free"}
+                                onClick={() => toggle("licenseType", "free")}
+                                tooltip="Free for commercial and personal use">
+                                <span className="text-[11px] font-bold">Free</span>
+                            </FilterBtn>
+                            <FilterBtn
+                                active={filters.licenseType === "personal"}
+                                onClick={() => toggle("licenseType", "personal")}
+                                tooltip="Free for personal use only — commercial license available">
+                                <span className="text-[11px] font-bold">Personal</span>
+                            </FilterBtn>
+                        </div>
+                    </div>
+
+                    {/* ── Writing Language ── */}
+                    <div className="space-y-1.5 pt-3 border-t-[1.5px] border-[#EBF5FF] border-dashed mt-3 mb-2">
+                        <p className="text-[11px] font-black uppercase tracking-widest pt-1" style={{ color: '#9EADC7' }}>Writing Language</p>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between h-10 bg-white font-medium text-xs border-[1.5px] border-[#EBF5FF]" style={{ color: '#9EADC7', borderColor: '#EBF5FF' }}>
+                                    {filters.subset
+                                        ? filters.subset.charAt(0).toUpperCase() + filters.subset.slice(1).replace("-", " ")
+                                        : "All Languages"}
+                                    <ChevronDown className="h-4 w-4 opacity-50" style={{ color: '#9EADC7' }} />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[260px] max-h-[300px] overflow-auto rounded-xl shadow-[0_10px_40px_-10px_rgb(0,0,0,0.15)] border-slate-100 p-2 z-50">
+                                <DropdownMenuItem className="cursor-pointer rounded-lg hover:bg-slate-50" onClick={() => toggle("subset", null)}>All Languages</DropdownMenuItem>
+                                {["latin","latin-ext","cyrillic","cyrillic-ext","greek","greek-ext",
+                                  "vietnamese","devanagari","arabic","hebrew","thai","khmer",
+                                  "korean","japanese","bengali","gujarati","tamil","telugu"].map(s => (
+                                    <DropdownMenuItem className="cursor-pointer rounded-lg hover:bg-slate-50" key={s} onClick={() => toggle("subset", s)}>
+                                        {s.charAt(0).toUpperCase() + s.slice(1).replace("-", " ")}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
 
                 </div>
             </div>
