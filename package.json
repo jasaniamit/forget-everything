@@ -9,13 +9,13 @@
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "analyze-fonts": "node --env-file=.env --import tsx/esm server/scripts/analyze-fonts.ts",
-    "analyze-fonts:force": "node --env-file=.env --import tsx/esm server/scripts/analyze-fonts.ts --force",
-    "analyze-fonts:reset": "node --env-file=.env --import tsx/esm server/scripts/analyze-fonts.ts --reset",
-    "fix:1001-commercial": "node --env-file=.env --import tsx/esm server/scripts/fix-1001-commercial-urls.ts",
-    "fix:dafont-commercial": "node --env-file=.env --import tsx/esm server/scripts/fix-dafont-commercial-urls.ts",
-    "fix:fontspace-commercial": "node --env-file=.env --import tsx/esm server/scripts/fix-fontspace-commercial-urls.ts",
-    "fix:commercial:all": "node --env-file=.env --import tsx/esm server/scripts/fix-all-commercial-urls.ts"
+    "analyze-fonts": "node --import tsx/esm server/scripts/analyze-fonts.ts",
+    "analyze-fonts:force": "node --import tsx/esm server/scripts/analyze-fonts.ts --force",
+    "analyze-fonts:reset": "node --import tsx/esm server/scripts/analyze-fonts.ts --reset",
+    "fix:1001-commercial": "node --import tsx/esm server/scripts/fix-1001-commercial-urls.ts",
+    "fix:dafont-commercial": "node --import tsx/esm server/scripts/fix-dafont-commercial-urls.ts",
+    "fix:fontspace-commercial": "node --import tsx/esm server/scripts/fix-fontspace-commercial-urls.ts",
+    "fix:commercial:all": "node --import tsx/esm server/scripts/fix-all-commercial-urls.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
